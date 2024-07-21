@@ -16,7 +16,7 @@ import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 
-from config import DEVICE, N_u, N_v, TRAIN_PATH, SUBMISSION_PATH, VAL_SIZE
+from config import DEVICE, N_u, N_v, VAL_SIZE
 
 ########## Functions ##########
 def extract_users_items_ratings(df):
@@ -53,7 +53,8 @@ def standardize_excluding_zeros(rating_matrix: np.ndarray, mask: np.ndarray) -> 
 def create_bipartite_graph(users: torch.Tensor, items: torch.Tensor, ratings: torch.Tensor) -> torch.Tensor:
     """
     Create a bipartite graph from the users, items and ratings.
-        graph: [[0, R], [R^T, 0]] 
+        graph: [[0, R], 
+                [R^T, 0]] 
         shape: [ [N_u x N_u], [N_u x N_v], 
                  [N_v x N_u], [N_v x N_v] ]
     """
@@ -100,16 +101,15 @@ def create_inverse_sqrt_degree_matrix(bip_degree_matrix: torch.Tensor) -> torch.
 
 ########## Main ##########
 
-def preprocess() -> tuple:
+def preprocess(data: tuple[pd.DataFrame, pd.DataFrame]) -> tuple:
     """
     Get the normalized bipartite adjacency matrix for training.
     """
     # Load data
-    train_df = pd.read_csv(TRAIN_PATH)
-    submission_df = pd.read_csv(SUBMISSION_PATH)
+    train_df, submission_df = data
 
     # Extract adjacency lists: observed values edge index (src, tgt) and ratings (values)
-    submission_users, submission_movies, _ = extract_users_items_ratings(submission_df)
+    submission_users, submission_items, _ = extract_users_items_ratings(submission_df)
     train_users, train_items, train_ratings = extract_users_items_ratings(train_df)
 
     # Create rating matrix from the triplets
@@ -145,4 +145,4 @@ def preprocess() -> tuple:
     A_tilde = D_norm @ bip_adj_matrix @ D_norm
     A_tilde = A_tilde.to(DEVICE)
 
-    return A_tilde, standardized_train_ratings, train_users, train_items, means, stds, val_users, val_items, standardized_val_ratings, submission_users, submission_movies
+    return A_tilde, standardized_train_ratings, train_users, train_items, means, stds, val_users, val_items, standardized_val_ratings, submission_users, submission_items
