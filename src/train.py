@@ -48,18 +48,15 @@ def save_model_on_val_improvement(model, optimizer, best_loss, last_loss):
         best_loss = last_loss
         torch.save(model.state_dict(), "../data/logs/best_val_model.pth")
 
-def report_losses(epoch, train_loss, val_loss, hyper_verbose, last=False):
+def report_losses(epoch, train_loss, val_loss, hyper_verbose):
     """
     Print the training and validation losses.
     """
-    if last:
-        print(f"Final epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f}")
+    if hyper_verbose:
+        print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f}")
     else:
-        if hyper_verbose:
+        if epoch % 100 == 0:
             print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f}")
-        else:
-            if epoch % 100 == 0:
-                print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f}")
 
 def early_stopping(epoch, train_losses, stop_threshold) -> bool:
     """
@@ -70,6 +67,14 @@ def early_stopping(epoch, train_losses, stop_threshold) -> bool:
         and abs(train_losses[-2] - train_losses[-1]) < stop_threshold:
         return True
     return False
+
+def report_best_val_loss(val_losses) -> None:
+    """
+    Report the best validation loss and the epoch at which it was achieved.
+    """
+    best_val_loss = min(val_losses)
+    best_val_epoch = val_losses.index(best_val_loss)
+    print(f"Best val loss: {best_val_loss:.4f} at epoch {best_val_epoch}")
 
 
 ########## Main ##########
@@ -91,6 +96,6 @@ def train_model(model, optimizer, loss_fn, train_users, train_items, train_ratin
         val_losses.append(val_loss)
         if early_stopping(epoch, train_losses, stop_threshold):
             break
-    report_losses(epoch, train_loss, val_loss, hyper_verbose, True)
+    report_best_val_loss(val_losses)
 
     return train_losses, val_losses

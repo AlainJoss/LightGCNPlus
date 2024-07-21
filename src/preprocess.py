@@ -53,8 +53,8 @@ def standardize_excluding_zeros(rating_matrix: np.ndarray, mask: np.ndarray) -> 
 def create_bipartite_graph(users: torch.Tensor, items: torch.Tensor, ratings: torch.Tensor) -> torch.Tensor:
     """
     Create a bipartite graph from the users, items and ratings.
-        graph: [[0, R], 
-                [R^T, 0]] 
+        graph: [ [0, R], 
+                 [R^T, 0] ] 
         shape: [ [N_u x N_u], [N_u x N_v], 
                  [N_v x N_u], [N_v x N_v] ]
     """

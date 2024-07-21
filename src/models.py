@@ -15,7 +15,7 @@ from config import N_u, N_v
 ########## Models ##########
 
 class ConcatNonLinear(nn.Module):
-    def __init__(self, A_tilde, embedding_dim, n_layers, init_emb_std):
+    def __init__(self, A_tilde, embedding_dim, n_layers, init_emb_std, dropout_rate=0.2):
         super(ConcatNonLinear, self).__init__()
         self.A_tilde = A_tilde  # normalized adjacency matrix
         self.K = embedding_dim
@@ -33,6 +33,7 @@ class ConcatNonLinear(nn.Module):
         self.mlp = nn.Sequential(
             nn.Linear(self.K * 2 * (self.L + 1), self.K),  # if L=1, the linear projects from 4K to 2K
             nn.GELU(),          # try 4K->K->1, 4K->2K->1, 4K->2K->K->1
+            nn.Dropout(dropout_rate),  # Adding dropout after the activation function
             nn.Linear(self.K, 1)  #,                
             # nn.GELU(),
             # nn.Linear(self.K, 1)
