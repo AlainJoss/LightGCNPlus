@@ -120,19 +120,26 @@ def preprocess(data: tuple[pd.DataFrame, pd.DataFrame]) -> tuple:
     mask = train_ratings_matrix != 0
 
     # Standardize the ratings matrix across columns (items) and extract ratings list for observed values
-    standardized_ratings_matrix, means, stds = standardize_excluding_zeros(train_ratings_matrix, mask)
-    standardized_ratings = standardized_ratings_matrix[train_users, train_items]
+    standardized_rating_matrix, means, stds = standardize_excluding_zeros(train_ratings_matrix, mask)
+    standardized_ratings = standardized_rating_matrix[train_users, train_items]
 
     # Split the data into trai and val sets
     train_users, val_users, train_items, val_items, standardized_train_ratings, standardized_val_ratings = \
         train_test_split(train_users, train_items, standardized_ratings, test_size=VAL_SIZE)
     
+    # Get the original val ratings for evaluation
+    original_val_ratings = train_ratings_matrix[val_users, val_items]
+    
     # Convert to torch tensors for training and move to device
+    
+    # convert standardized_rating_matrix, means and stds to torch tensors
+
     standardized_train_ratings = torch.tensor(standardized_train_ratings, dtype=torch.float).to(DEVICE)
     train_users = torch.tensor(train_users, dtype=torch.long).to(DEVICE)
     train_items = torch.tensor(train_items, dtype=torch.long).to(DEVICE)
 
     standardized_val_ratings = torch.tensor(standardized_val_ratings, dtype=torch.float).to(DEVICE)
+    original_val_ratings = torch.tensor(original_val_ratings, dtype=torch.float).to(DEVICE)
     val_users = torch.tensor(val_users, dtype=torch.long).to(DEVICE)
     val_items = torch.tensor(val_items, dtype=torch.long).to(DEVICE)
 
@@ -145,4 +152,4 @@ def preprocess(data: tuple[pd.DataFrame, pd.DataFrame]) -> tuple:
     A_tilde = D_norm @ bip_adj_matrix @ D_norm
     A_tilde = A_tilde.to(DEVICE)
 
-    return A_tilde, standardized_train_ratings, train_users, train_items, means, stds, val_users, val_items, standardized_val_ratings, submission_users, submission_items
+    return A_tilde, standardized_train_ratings, train_users, train_items, means, stds, val_users, val_items, original_val_ratings, standardized_val_ratings, submission_users, submission_items

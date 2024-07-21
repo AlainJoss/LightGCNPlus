@@ -11,7 +11,9 @@ We will define the following functions:
 
 ########## Imports ##########
 import torch
-from config import MODEL_PATH
+import numpy as np
+from config import DEVICE
+from config import N_u, N_v
 
 
 ########## Functions ##########
@@ -40,6 +42,25 @@ def evaluate_one_epoch(model, loss_fn, users, items, ratings) -> float:
 
     return J.item()
 
+def evaluate_one_epoch_original(model, loss_fn, users, items, ratings, means, stds) -> float:
+    """
+    Evaluate the model for one epoch.
+    """
+    model.eval()
+    with torch.no_grad():
+        preds = model.forward(users, items)
+        reversed_preds = reverse_standardization(preds, means, stds, users, items)
+        J = loss_fn(reversed_preds, ratings)
+    return J.item()
+
+def reverse_standardization(preds, means, stds, users, items) -> torch.Tensor:
+    pred_rating_matrix = np.zeros((N_u, N_v))
+    pred_rating_matrix[users.cpu().numpy(), items.cpu().numpy()] = preds.cpu().numpy()
+    reversed_ratings = pred_rating_matrix * stds + means
+    reversed_ratings = reversed_ratings[users.cpu().numpy(), items.cpu().numpy()]
+    reversed_ratings = torch.tensor(reversed_ratings, dtype=torch.float32, device=DEVICE)
+    return reversed_ratings
+
 def save_model_on_val_improvement(model, optimizer, best_loss, last_loss):
     """
     Save the model if the validation loss has improved.
@@ -48,15 +69,15 @@ def save_model_on_val_improvement(model, optimizer, best_loss, last_loss):
         best_loss = last_loss
         torch.save(model.state_dict(), "../data/logs/best_val_model.pth")
 
-def report_losses(epoch, train_loss, val_loss, hyper_verbose):
+def report_losses(epoch, train_loss, val_loss_standardized, val_loss_original, hyper_verbose):
     """
     Print the training and validation losses.
     """
     if hyper_verbose:
-        print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f}")
+        print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss standardized: {val_loss_standardized:.4f} - Val loss original: {val_loss_original:.4f}")
     else:
         if epoch % 100 == 0:
-            print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss:.4f}")
+            print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss_standardized:.4f} - Val loss original: {val_loss_original:.4f}")
 
 def early_stopping(epoch, train_losses, stop_threshold) -> bool:
     """
@@ -79,23 +100,27 @@ def report_best_val_loss(val_losses) -> None:
 
 ########## Main ##########
 
-def train_model(model, optimizer, loss_fn, train_users, train_items, train_ratings, val_users, val_items, val_ratings, n_epochs, stop_threshold, save_best_model, hyper_verbose=True) -> tuple[list, list]:
+def train_model(model, optimizer, loss_fn, train_users, train_items, standardized_train_ratings, val_users, val_items, orig_val_ratings, standardized_val_ratings, means, stds, n_epochs, stop_threshold, save_best_model, hyper_verbose=True) -> tuple[list, list]:
     """
     Train the model.
     """
     best_loss = float('inf')
     train_losses = []
-    val_losses = []
+    val_losses_std = []
+    val_losses_orig = []
     for epoch in range(n_epochs):
-        train_loss = train_one_epoch(model, optimizer, loss_fn, train_users, train_items, train_ratings)
-        val_loss = evaluate_one_epoch(model, loss_fn, val_users, val_items, val_ratings)
-        report_losses(epoch, train_loss, val_loss, hyper_verbose)
+        train_loss = train_one_epoch(model, optimizer, loss_fn, train_users, train_items, standardized_train_ratings)
+        val_loss_standardized = evaluate_one_epoch(model, loss_fn, val_users, val_items, standardized_val_ratings)
+        val_loss_original = evaluate_one_epoch_original(model, loss_fn, val_users, val_items, orig_val_ratings, means, stds)
+        report_losses(epoch, train_loss, val_loss_standardized, val_loss_original, hyper_verbose)
         if save_best_model:
-            save_model_on_val_improvement(model, optimizer, best_loss, val_loss)
+            save_model_on_val_improvement(model, optimizer, best_loss, val_loss_standardized)
         train_losses.append(train_loss)
-        val_losses.append(val_loss)
+        val_losses_std.append(val_loss_standardized)
+        val_losses_orig.append(val_loss_original)
         if early_stopping(epoch, train_losses, stop_threshold):
             break
-    report_best_val_loss(val_losses)
-
-    return train_losses, val_losses
+    report_best_val_loss(val_losses_std)
+    report_best_val_loss(val_losses_orig)
+    
+    return train_losses, val_losses_std, val_losses_orig
