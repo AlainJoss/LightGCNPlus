@@ -1,6 +1,10 @@
 import torch
 
-DEVICE = torch.device("mps") if torch.device("mps") else torch.device("cpu")
+DEVICE = torch.device("cpu")
+if torch.backends.mps.is_available():
+    DEVICE = torch.device("mps") 
+elif torch.cuda.is_available():
+    DEVICE = torch.device("cpu")
 N_u, N_v = (10000, 1000)
 
 TRAIN_PATH = "../data/raw_data/train.csv"

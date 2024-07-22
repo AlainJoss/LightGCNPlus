@@ -1,3 +1,5 @@
 .DS_Store
 data/models/best_val_model.pth
 src/test_dev.ipynb
+
+*__pycache__
