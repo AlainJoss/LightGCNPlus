@@ -31,40 +31,42 @@ class GraphAttentionLayer(nn.Module):
 
 
         # Attention mechanism weights
-        self.a = nn.Parameter(torch.zeros(size=(2*out_features, 1)))
-        nn.init.xavier_uniform_(self.a.data, gain=1.414)
+        self.a = nn.ParameterList(
+            [nn.Parameter(torch.empty(size=(out_features, 1))) for _ in range(2)]
+        )
+        for a in self.a:
+            nn.init.xavier_uniform_(a.data, gain=1.414)
+
 
         # LeakyReLU activation
         self.leakyrelu = nn.LeakyReLU(self.alpha)
 
     def _attention_scores(self, Wh: torch.Tensor):
-        N = Wh.size()[0]
-        a_input = torch.cat([Wh.repeat(1, N).view(N * N, -1), Wh.repeat(N, 1)], dim=1).view(N, N, 2 * self.out_features)
-        e = torch.matmul(a_input, self.a).squeeze(2)
+        
+        e1 = torch.matmul(Wh, self.a[0])
+        e2 = torch.matmul(Wh, self.a[1])
+        e = e1 + e2
         return self.leakyrelu(e)
     
     def forward(self, h, adj):
-        N = h.shape[0]
-        
+
         Wh = torch.mm(h, self.W)  
         Wh = F.dropout(Wh, self.dropout, training=self.training)
-        
+
         e = self._attention_scores(Wh)
-        
+
         # Masked attention
         zero_vec = -9e15 * torch.ones_like(e)
-
         e = torch.where(adj > 0, e, zero_vec)
-        
+
         # Softmax to normalize attention coefficients
         attention = F.softmax(e, dim=1)
-        
+
         # Apply dropout to attention coefficients
         attention = F.dropout(attention, self.dropout, training=self.training)
         
         # Linear combination of the features with the attention coefficients
         h_prime = torch.matmul(attention, Wh)
-        
         return h_prime
 
 class MultiGraphAttentionLayer(nn.Module):
@@ -116,7 +118,7 @@ class ConcatNonLinear(nn.Module):
         nn.init.normal_(self.E_v.weight, std=init_emb_std)
 
         # attention
-        self.attention = MultiGraphAttentionLayer(in_features=self.K, out_features=self.K,num_heads=self.num_heads, concat=False)
+        self.attention = MultiGraphAttentionLayer(in_features=self.K * (self.L+1), out_features=self.K * (self.L+1), num_heads=self.num_heads, concat=False)
 
         # Projection to output space after message passing, aggregation, and selection
         self.mlp = nn.Sequential(
@@ -132,12 +134,12 @@ class ConcatNonLinear(nn.Module):
     def message_passing(self) -> torch.Tensor:
         E_0 = torch.cat([self.E_u.weight, self.E_v.weight], dim=0)  # size (N_u + N_v) x K
         E_layers = [E_0]
-        # E_l = E_0
+        E_l = E_0
 
-        # for l in range(self.L):
-        #     E_l = torch.mm(self.A_tilde, E_l)  # shape (N_u + N_v) x K
-        #     E_layers.append(E_l) 
-        return torch.cat(E_layers)
+        for l in range(self.L):
+            E_l = torch.mm(self.A_tilde, E_l)  # shape (N_u + N_v) x K
+            E_layers.append(E_l) 
+        return E_layers
     
     def aggregate(self, embs: list) -> torch.Tensor:
         E_combined = torch.cat(embs, dim=1)
@@ -152,9 +154,8 @@ class ConcatNonLinear(nn.Module):
     
     def forward(self, users, items):
         E_layers = self.message_passing()
-        # attention
-        E_attention = self.attention(E_layers, self.A_tilde)
-        # E_aggregated = self.aggregate(E_layers)
+        E_aggregated = self.aggregate(E_layers)
+        E_attention = self.attention(E_aggregated, self.A_tilde)
         E_u_sel, E_v_sel = self.select_embeddings(users, items, E_attention)
 
         # Project to output space
