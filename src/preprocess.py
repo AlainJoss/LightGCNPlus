@@ -21,7 +21,7 @@ from config import DEVICE, N_u, N_v, VAL_SIZE
 ########## Functions ##########
 def extract_users_items_ratings(df):
     """
-    Extract users, movies, and predictions from the dataframe
+    Extract users, movies, and predictions from the dataframe.
     """
     users, movies = [np.squeeze(arr) for arr in np.split(df.Id.str.extract('r(\d+)_c(\d+)').values.astype(int) - 1, 2, axis=-1)]
     ratings = df.Prediction.values
@@ -127,12 +127,12 @@ def preprocess(data: tuple[pd.DataFrame, pd.DataFrame]) -> tuple:
     train_users, val_users, train_items, val_items, standardized_train_ratings, standardized_val_ratings = \
         train_test_split(train_users, train_items, standardized_ratings, test_size=VAL_SIZE)
     
+    # TODO: overwrite the standardized_val_ratings with zeros at the validation indices
+    
     # Get the original val ratings for evaluation
     original_val_ratings = train_ratings_matrix[val_users, val_items]
     
     # Convert to torch tensors for training and move to device
-    
-    # convert standardized_rating_matrix, means and stds to torch tensors
 
     standardized_train_ratings = torch.tensor(standardized_train_ratings, dtype=torch.float).to(DEVICE)
     train_users = torch.tensor(train_users, dtype=torch.long).to(DEVICE)

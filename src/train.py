@@ -76,7 +76,7 @@ def report_losses(epoch, train_loss, val_loss_standardized, val_loss_original, h
     if hyper_verbose:
         print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss standardized: {val_loss_standardized:.4f} - Val loss original: {val_loss_original:.4f}")
     else:
-        if epoch % 100 == 0:
+        if epoch % 20 == 0:
             print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss_standardized:.4f} - Val loss original: {val_loss_original:.4f}")
 
 def early_stopping(epoch, train_losses, stop_threshold) -> bool:
@@ -120,7 +120,6 @@ def train_model(model, optimizer, loss_fn, train_users, train_items, standardize
         val_losses_orig.append(val_loss_original)
         if early_stopping(epoch, train_losses, stop_threshold):
             break
-    report_best_val_loss(val_losses_std)
     report_best_val_loss(val_losses_orig)
-    
+
     return train_losses, val_losses_std, val_losses_orig

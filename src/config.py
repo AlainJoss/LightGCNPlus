@@ -7,7 +7,7 @@ TRAIN_PATH = "../data/raw_data/train.csv"
 SUBMISSION_PATH = "../data/raw_data/sample_submission.csv"
 
 # VAL_SIZE = 0.008496  # 10000 / 1176952 ~ 0.85%
-VAL_SIZE = 0.05
+VAL_SIZE = 0.01
 
 MODEL_PATH = "../data/models/best_val_model.pth"
 
@@ -20,3 +20,5 @@ BASE_HYPERPARAMS = {
     "EPOCHS": 500,
     "STOP_THRESHOLD": 1e-06
 }
+
+SPLITS = 2
