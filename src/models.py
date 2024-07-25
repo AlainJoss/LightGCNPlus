@@ -24,39 +24,34 @@ class GraphAttentionLayer(nn.Module):
         self.out_features = out_features
         self.alpha = alpha
         self.dropout = dropout
-
+        
         # Weight matrix for the linear transformation
-        self.W = nn.Parameter(torch.empty(size=(in_features, out_features)))
-        nn.init.xavier_uniform_(self.W.data, gain=1.414)
-
+        self.W = nn.Linear(in_features, out_features)
 
         # Attention mechanism weights
-        self.a = nn.ParameterList(
-            [nn.Parameter(torch.empty(size=(out_features, 1))) for _ in range(2)]
-        )
-        for a in self.a:
-            nn.init.xavier_uniform_(a.data, gain=1.414)
-
+        self.a1 = nn.Linear(out_features, 1)
+        self.a2 = nn.Linear(out_features, 1)
 
         # LeakyReLU activation
         self.leakyrelu = nn.LeakyReLU(self.alpha)
 
     def _attention_scores(self, Wh: torch.Tensor):
         
-        e1 = torch.matmul(Wh, self.a[0])
-        e2 = torch.matmul(Wh, self.a[1])
-        e = e1 + e2
+        Wha1 = self.a1(Wh)
+        Wha2 = self.a2(Wh)
+
+        e = Wha1 + Wha2.t()
+                
         return self.leakyrelu(e)
     
     def forward(self, h, adj):
-
-        Wh = torch.mm(h, self.W)  
+        Wh = self.W(h)
         Wh = F.dropout(Wh, self.dropout, training=self.training)
-
+        
         e = self._attention_scores(Wh)
 
         # Masked attention
-        zero_vec = -9e15 * torch.ones_like(e)
+        zero_vec = -9e15 * torch.ones_like(e)        
         e = torch.where(adj > 0, e, zero_vec)
 
         # Softmax to normalize attention coefficients
@@ -155,7 +150,12 @@ class ConcatNonLinear(nn.Module):
     def forward(self, users, items):
         E_layers = self.message_passing()
         E_aggregated = self.aggregate(E_layers)
-        E_attention = self.attention(E_aggregated, self.A_tilde)
+        adj = torch.zeros(size=(N_u + N_v, N_u + N_v), device=users.device)
+        adj[items+N_u, users] = 1
+        adj[users, items+N_u] = 1
+        
+        E_attention = self.attention(E_aggregated, adj)
+
         E_u_sel, E_v_sel = self.select_embeddings(users, items, E_attention)
 
         # Project to output space
