@@ -1,6 +1,5 @@
 .DS_Store
-data/models/best_val_model.pth
-src/test_dev.ipynb
 data/.DS_Store
-data/logs/best_val_model.pth
-data/logs/results.json
+data/model_state
+data/model_state/model_inputs.pkl
+data/model_state/best_val_model.pth
