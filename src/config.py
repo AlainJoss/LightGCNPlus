@@ -1,10 +1,14 @@
 import torch
 
-DEVICE = torch.device("mps") if torch.device("mps") else torch.device("cpu")
+if torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+else:
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 N_u, N_v = (10000, 1000)
 
 TRAIN_PATH = "../data/raw_data/train.csv"
-SUBMISSION_PATH = "../data/raw_data/sample_submission.csv"
+SUBMISSION_PATH = "../data/submission_data/submission_users_items.pkl"
 
 # VAL_SIZE = 0.008496  # 10000 / 1176952 ~ 0.85%
 VAL_SIZE = 0.01

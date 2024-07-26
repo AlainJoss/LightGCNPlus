@@ -10,7 +10,6 @@ This involves the following steps:
 """
 
 ########## Imports ##########
-import os
 import pandas as pd
 import numpy as np
 import torch
@@ -101,36 +100,31 @@ def create_inverse_sqrt_degree_matrix(bip_degree_matrix: torch.Tensor) -> torch.
 
 ########## Main ##########
 
-def preprocess(data: tuple[pd.DataFrame, pd.DataFrame]) -> tuple:
+def preprocess(train_df: pd.DataFrame) -> tuple:
     """
     Get the normalized bipartite adjacency matrix for training.
     """
-    # Load data
-    train_df, submission_df = data
 
     # Extract adjacency lists: observed values edge index (src, tgt) and ratings (values)
-    submission_users, submission_items, _ = extract_users_items_ratings(submission_df)
-    train_users, train_items, train_ratings = extract_users_items_ratings(train_df)
+    all_users, all_items, all_ratings = extract_users_items_ratings(train_df)
 
     # Create rating matrix from the triplets
-    train_ratings_matrix = np.zeros((N_u, N_v))
-    train_ratings_matrix[train_users, train_items] = train_ratings
+    all_ratings_matrix = np.zeros((N_u, N_v))
+    all_ratings_matrix[all_users, all_items] = all_ratings
 
     # Define mask for selecting observed values
-    mask = train_ratings_matrix != 0
+    all_mask = all_ratings_matrix != 0
 
     # Standardize the ratings matrix across columns (items) and extract ratings list for observed values
-    standardized_rating_matrix, means, stds = standardize_excluding_zeros(train_ratings_matrix, mask)
-    standardized_ratings = standardized_rating_matrix[train_users, train_items]
+    standardized_rating_matrix, means, stds = standardize_excluding_zeros(all_ratings_matrix, all_mask)
+    standardized_ratings = standardized_rating_matrix[all_users, all_items]
 
     # Split the data into trai and val sets
     train_users, val_users, train_items, val_items, standardized_train_ratings, standardized_val_ratings = \
-        train_test_split(train_users, train_items, standardized_ratings, test_size=VAL_SIZE)
-    
-    # TODO: overwrite the standardized_val_ratings with zeros at the validation indices
+        train_test_split(all_users, all_items, standardized_ratings, test_size=VAL_SIZE)
     
     # Get the original val ratings for evaluation
-    original_val_ratings = train_ratings_matrix[val_users, val_items]
+    original_val_ratings = all_ratings_matrix[val_users, val_items]
     
     # Convert to torch tensors for training and move to device
 
@@ -152,4 +146,4 @@ def preprocess(data: tuple[pd.DataFrame, pd.DataFrame]) -> tuple:
     A_tilde = D_norm @ bip_adj_matrix @ D_norm
     A_tilde = A_tilde.to(DEVICE)
 
-    return A_tilde, standardized_train_ratings, train_users, train_items, means, stds, val_users, val_items, original_val_ratings, standardized_val_ratings, submission_users, submission_items
+    return A_tilde, standardized_train_ratings, train_users, train_items, means, stds, val_users, val_items, original_val_ratings, standardized_val_ratings
