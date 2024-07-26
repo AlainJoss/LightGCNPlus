@@ -15,17 +15,18 @@ from load import load_data
 from preprocess import preprocess
 
 ########## Functions ##########
-def report_combo(combo) -> None:
+def report_run(model_name, combo, counter, total_runs) -> None:
     """
     Print the hyperparameters combination.
     """
+    print(f"Run {counter}/{total_runs}")
+    print(f"Model: {model_name}")
     print(f"HP: L={combo[0]}, K={combo[1]}, INIT_EMBS_STD={combo[2]}, LR={combo[3]}, WEIGHT_DECAY={combo[4]}, DROPOUT={combo[5]}")
 
 def num_combos(grid) -> None:
     num_combinations = np.prod([len(v) for v in grid.values()]) * len(models) * SPLITS
     print(f"Number of combinations: {num_combinations}")
     return num_combinations
-
 
 ########## Hyperparams ##########
 
@@ -47,6 +48,17 @@ models = {
 }
 
 ########## Main ##########
+
+def tune_hyperparameters(models: list, grid: dict) -> None:
+    counter = 0
+    n_combos = num_combos(grid)
+    for model_name, mod in models.items():
+        for combo in product(*grid.values()):
+            counter += 1
+            report_run(model_name, combo, counter, n_combos)
+            
+
+
 def hyperparameter_tuning(splits):
 
     count_runs = 0
