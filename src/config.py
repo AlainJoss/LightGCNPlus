@@ -9,20 +9,6 @@ N_u, N_v = (10000, 1000)
 
 TRAIN_PATH = "../data/raw_data/train.csv"
 SUBMISSION_PATH = "../data/submission_data/submission_users_items.pkl"
+BEST_VAL_MODEL_PATH = "../data/models/best_val_model.pth"
 
-# VAL_SIZE = 0.008496  # 10000 / 1176952 ~ 0.85%
-VAL_SIZE = 0.01
-
-MODEL_PATH = "../data/models/best_val_model.pth"
-
-BASE_HYPERPARAMS = {
-    "L": 1,
-    "K": 30,
-    "INIT_EMBS_STD": 0.1,
-    "LR": 0.08,
-    "WEIGHT_DECAY": 1e-04,
-    "EPOCHS": 500,
-    "STOP_THRESHOLD": 1e-06
-}
-
-SPLITS = 2
+VAL_SIZE = 0.01019582787  # 12000 / 1176952

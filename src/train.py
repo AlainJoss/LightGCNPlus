@@ -90,7 +90,7 @@ def report_best_val_loss(val_losses) -> None:
     """
     best_val_loss = min(val_losses)
     best_val_epoch = val_losses.index(best_val_loss)
-    print(f"Best val loss: {best_val_loss:.4f} at epoch {best_val_epoch}")
+    print(f"Best val loss: {best_val_loss:.4f} at epoch {best_val_epoch + 1}")
 
 ########## Main ##########
 

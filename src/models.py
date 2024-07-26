@@ -12,66 +12,21 @@ from torch import nn
 from config import N_u, N_v, DEVICE
 import torch.nn.functional as F
 
-########## Functions ##########
-
-def save_model_inputs(A_tilde, act_fn, K, L, init_embs_std, dropout, projections):
-    """
-    Save the model inputs to a dictionary using pickle.
-    """
-    model_inputs = {
-        'A_tilde': A_tilde,  # Tensor
-        'act_fn': act_fn,  # Activation function
-        'K': K,
-        'L': L,
-        'init_embs_std': init_embs_std,
-        'dropout': dropout,
-        'projections': projections
-    }
-    # Save dictionary to a file using pickle
-    with open("../data/model_state/model_inputs.pkl", "wb") as f:
-        pickle.dump(model_inputs, f)
-
-def load_best_val_model():
-    """
-    Load the best model from a file.
-    """
-    model = LightGCN(*load_model_inputs())
-    model.load_state_dict(torch.load("../data/model_state/best_val_model.pth"))
-    return model.to(DEVICE)
-
-def load_model_inputs(filename="../data/model_state/model_inputs.pkl"):
-    """
-    Load the model inputs from a file using pickle and reconstruct them.
-    """
-    with open(filename, "rb") as f:
-        model_inputs = pickle.load(f)
-    
-    A_tilde = model_inputs['A_tilde']
-    act_fn = model_inputs['act_fn']
-    K = model_inputs['K']
-    L = model_inputs['L']
-    init_embs_std = model_inputs['init_embs_std']
-    dropout = model_inputs['dropout']
-    projections = model_inputs['projections']
-    
-    return A_tilde, act_fn, K, L, init_embs_std, dropout, projections
-
 ########## Models ##########
 
 class Model(nn.Module):
-    def __init__(self, model_name):
+    def __init__(self):
         super(Model, self).__init__()
-        self.name = model_name
-    
+
     def forward(self, users, items):
         raise NotImplementedError("Derived classes must implement this method")
     
     def get_ratings(self, users, items):
-        raise NotImplementedError("Derived classes must implement this method")
+        return self.forward(users, items)
 
 class BaseLightGCN(Model):
-    def __init__(self, model_name, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate):
-        super(BaseLightGCN, self).__init__(model_name)
+    def __init__(self, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate):
+        super(BaseLightGCN, self).__init__()
 
         self.A_tilde = A_tilde  # normalized adjacency matrix
         self.K = embedding_dim
@@ -127,13 +82,10 @@ class BaseLightGCN(Model):
         out = self.mlp(concat_users_items).squeeze()  
         return out 
 
-    def get_ratings(self, users, items):
-        return self.forward(users, items)
-
-class LightGCN(BaseLightGCN):
-    def __init__(self, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections, model_name=""):
+class LightGCNPlus(BaseLightGCN):
+    def __init__(self, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections):
         self.projections = projections
-        super().__init__(model_name, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate)
+        super().__init__(A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate)
 
         # For reproducibility after training
         save_model_inputs(A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections)
@@ -149,3 +101,47 @@ class LightGCN(BaseLightGCN):
             input_dim = output_dim
         layers.append(nn.Linear(input_dim, 1))
         return nn.Sequential(*layers)
+    
+########## Functions ##########
+
+def save_model_inputs(A_tilde, act_fn, K, L, init_embs_std, dropout, projections):
+    """
+    Save the model inputs to a dictionary using pickle.
+    """
+    model_inputs = {
+        'A_tilde': A_tilde,  # Tensor
+        'act_fn': act_fn,  # Activation function
+        'K': K,
+        'L': L,
+        'init_embs_std': init_embs_std,
+        'dropout': dropout,
+        'projections': projections
+    }
+    # Save dictionary to a file using pickle
+    with open("../data/model_state/model_inputs.pkl", "wb") as f:
+        pickle.dump(model_inputs, f)
+
+def load_best_val_model(model_class: Model) -> Model:
+    """
+    Load the best model from a file.
+    """
+    model = model_class(*load_model_inputs())
+    model.load_state_dict(torch.load("../data/model_state/best_val_model.pth"))
+    return model.to(DEVICE)
+
+def load_model_inputs(filename="../data/model_state/model_inputs.pkl"):
+    """
+    Load the model inputs from a file using pickle and reconstruct them.
+    """
+    with open(filename, "rb") as f:
+        model_inputs = pickle.load(f)
+    
+    A_tilde = model_inputs['A_tilde']
+    act_fn = model_inputs['act_fn']
+    K = model_inputs['K']
+    L = model_inputs['L']
+    init_embs_std = model_inputs['init_embs_std']
+    dropout = model_inputs['dropout']
+    projections = model_inputs['projections']
+    
+    return A_tilde, act_fn, K, L, init_embs_std, dropout, projections
