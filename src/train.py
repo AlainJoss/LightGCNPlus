@@ -26,8 +26,7 @@ def train_one_epoch(model, optimizer, loss_fn, users, items, ratings) -> float:
     J = loss_fn(preds, ratings)
     J.backward()
     optimizer.step()
-
-    return J.item()
+    return torch.sqrt(J).item()
 
 def evaluate_one_epoch(model, loss_fn, users, items, ratings) -> float:
     """
@@ -37,8 +36,7 @@ def evaluate_one_epoch(model, loss_fn, users, items, ratings) -> float:
     with torch.no_grad():
         preds = model.forward(users, items)
         J = loss_fn(preds, ratings)
-
-    return J.item()
+    return torch.sqrt(J).item()
 
 def evaluate_one_epoch_original(model, loss_fn, users, items, ratings, means, stds) -> float:
     """
@@ -49,7 +47,8 @@ def evaluate_one_epoch_original(model, loss_fn, users, items, ratings, means, st
         preds = model.forward(users, items)
         reversed_preds = reverse_standardization(preds, means, stds, users, items)
         J = loss_fn(reversed_preds, ratings)
-    return J.item()
+    return torch.sqrt(J).item()
+
 
 def reverse_standardization(preds, means, stds, users, items) -> torch.Tensor:
     pred_rating_matrix = np.zeros((N_u, N_v))
@@ -72,7 +71,7 @@ def report_losses(epoch, train_loss, val_loss_standardized, val_loss_original, v
     Print the training and validation losses.
     """
     if epoch % verbosity == 0:
-        print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss: {val_loss_standardized:.4f} - Val loss original: {val_loss_original:.4f}")
+        print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss std: {val_loss_standardized:.4f} - Val loss original: {val_loss_original:.4f}")
 
 def early_stopping(epoch, train_losses, stop_threshold) -> bool:
     """

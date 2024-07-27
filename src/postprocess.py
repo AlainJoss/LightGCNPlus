@@ -57,12 +57,6 @@ def to_submission_format(users, movies, predictions):
 ########## Main ##########
 
 def report_training_results(train_rmse, val_rmse_std, val_rmse_orig):
-    # Training stats    
-    print("Min training loss:", round(min(train_rmse), 4))
-    print("Min validation loss std:", round(min(val_rmse_std), 4))
-    print("Min validation loss orig:", round(min(val_rmse_orig), 4))
-    print("Min validation loss at epoch:", val_rmse_std.index(min(val_rmse_std)))
-
     # Replace values above 1 with 1 in the rmse lists
     train_rmse_plot = [min(1, x) for x in train_rmse]
     val_rmse_std_plot = [min(1, x) for x in val_rmse_std]
@@ -89,7 +83,7 @@ def postprocess(model_class, means, stds):
     # Read model that achieved best validation loss
     submission_users, submission_items = load_submission_users_items()
     # Load model inputs
-    model = load_best_val_model()
+    model = load_best_val_model(model_class)
     model.eval()
     # Get predictions for submission
     final_ratings = model.get_ratings(submission_users, submission_items).cpu().detach().numpy()
