@@ -49,7 +49,6 @@ def evaluate_one_epoch_original(model, loss_fn, users, items, ratings, means, st
         J = loss_fn(reversed_preds, ratings)
     return torch.sqrt(J).item()
 
-
 def reverse_standardization(preds, means, stds, users, items) -> torch.Tensor:
     pred_rating_matrix = np.zeros((N_u, N_v))
     pred_rating_matrix[users.cpu().numpy(), items.cpu().numpy()] = preds.cpu().numpy()
@@ -66,15 +65,15 @@ def save_model_on_val_improvement(model, best_loss, last_loss):
         best_loss = last_loss
         torch.save(model.state_dict(), "../data/model_state/best_val_model.pth")
 
-def report_losses(epoch, train_loss, val_loss_standardized, val_loss_original, verbosity):
+def report_losses(epoch, train_losses, val_losses_std, val_losses_orig, verbosity):
     """
     Print the training and validation losses.
     """
     if epoch % verbosity == 0 and epoch > 0:
-        moving_avg_train = np.mean(val_loss_original[-verbosity:])
-        moving_avg_val_orig = np.mean(val_loss_original[-verbosity:])
-        moving_avg_val_std = np.mean(val_loss_standardized[-verbosity:])
-        print(f"Epoch {epoch} - Loss in last {verbosity} epochs: - Train: {moving_avg_train:.4f} - Val std: {moving_avg_val_orig:.4f} - Val orig: {moving_avg_val_std:.4f}")
+        moving_avg_train = np.mean(train_losses[-verbosity:])
+        moving_avg_val_orig = np.mean(val_losses_std[-verbosity:])
+        moving_avg_val_std = np.mean(val_losses_orig[-verbosity:])
+        print(f"Epoch {epoch} - Avg loss in last {verbosity} epochs: - Train: {moving_avg_train:.4f} - Val std: {moving_avg_val_orig:.4f} - Val orig: {moving_avg_val_std:.4f}")
 
 def early_stopping(epoch, train_losses, stop_threshold) -> bool:
     """
