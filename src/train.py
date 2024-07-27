@@ -70,8 +70,11 @@ def report_losses(epoch, train_loss, val_loss_standardized, val_loss_original, v
     """
     Print the training and validation losses.
     """
-    if epoch % verbosity == 0:
-        print(f"Epoch {epoch} - Train loss: {train_loss:.4f} - Val loss std: {val_loss_standardized:.4f} - Val loss original: {val_loss_original:.4f}")
+    if epoch % verbosity == 0 and epoch > 0:
+        moving_avg_train = np.mean(val_loss_original[-verbosity:])
+        moving_avg_val_orig = np.mean(val_loss_original[-verbosity:])
+        moving_avg_val_std = np.mean(val_loss_standardized[-verbosity:])
+        print(f"Epoch {epoch} - Loss in last {verbosity} epochs: - Train: {moving_avg_train:.4f} - Val std: {moving_avg_val_orig:.4f} - Val orig: {moving_avg_val_std:.4f}")
 
 def early_stopping(epoch, train_losses, stop_threshold) -> bool:
     """
@@ -105,12 +108,12 @@ def train_model(model, optimizer, loss_fn, train_users, train_items, standardize
         train_loss = train_one_epoch(model, optimizer, loss_fn, train_users, train_items, standardized_train_ratings)
         val_loss_standardized = evaluate_one_epoch(model, loss_fn, val_users, val_items, standardized_val_ratings)
         val_loss_original = evaluate_one_epoch_original(model, loss_fn, val_users, val_items, orig_val_ratings, means, stds)
-        report_losses(epoch, train_loss, val_loss_standardized, val_loss_original, verbosity)
         if save_best_model:
             save_model_on_val_improvement(model, best_loss, val_loss_standardized)
         train_losses.append(train_loss)
         val_losses_std.append(val_loss_standardized)
         val_losses_orig.append(val_loss_original)
+        report_losses(epoch, train_losses, val_losses_std, val_losses_orig, verbosity)
         if early_stopping(epoch, train_losses, stop_threshold):
             break
     report_best_val_loss(val_losses_orig)
