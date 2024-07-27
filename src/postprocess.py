@@ -13,6 +13,17 @@ from models import load_best_val_model
 
 ########## Functions ##########
 
+def load_means_stds(ID: str) -> tuple:
+    """
+    Load the means and stds from a file.
+    """
+    path = f"../data/model_state/means_stds_{ID}.npz"
+    with open(path, 'rb') as f:
+        data = np.load(f)
+        means = data['means']
+        stds = data['stds']
+    return means, stds
+
 def report_submission_results(final_ratings, rating_type):
     # Check min and max of final_ratings
     print("min:", final_ratings.min())
@@ -76,19 +87,21 @@ def report_training_results(train_rmse, val_rmse_std, val_rmse_orig):
     plt.legend()
     plt.show()
 
-def postprocess(model_class, means, stds):
+def postprocess(model_class, ID):
     """
     Postprocess the model predictions.
     """
     # Read model that achieved best validation loss
     submission_users, submission_items = load_submission_users_items()
     # Load model inputs
-    model = load_best_val_model(model_class)
+    model = load_best_val_model(model_class, ID)
     model.eval()
     # Get predictions for submission
     final_ratings = model.get_ratings(submission_users, submission_items).cpu().detach().numpy()
     
     report_submission_results(final_ratings, "raw")
+
+    means, stds = load_means_stds(ID)
     
     raw_predicted_ratings = model.get_ratings(submission_users, submission_items).detach().cpu().numpy()
     raw_submission_matrix = create_submission_matrix(raw_predicted_ratings, submission_users, submission_items)

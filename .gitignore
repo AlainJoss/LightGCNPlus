@@ -1,7 +1,8 @@
 .DS_Store
 data/.DS_Store
-data/model_state/best_val_model.pth
-data/model_state/model_inputs.pkl
+data/model_state/means_stds_*
+data/model_state/model_inputs_*
+data/model_state/best_val_model_*
 papers
 resources
 data/submission_data/submission.csv

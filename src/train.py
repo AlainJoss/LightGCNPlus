@@ -16,6 +16,14 @@ from config import N_u, N_v
 
 ########## Functions ##########
 
+def save_means_stds(ID, means: np.ndarray, stds: np.ndarray) -> None:
+    """
+    Save the means and stds to a file.
+    """
+    path = f"../data/model_state/means_stds_{ID}.npz"
+    with open(path, 'wb') as f:
+        np.savez(f, means=means, stds=stds)
+
 def train_one_epoch(model, optimizer, loss_fn, users, items, ratings) -> float:
     """
     Train the model for one epoch.
@@ -63,7 +71,7 @@ def save_model_on_val_improvement(model, best_loss, last_loss):
     """
     if last_loss < best_loss:
         best_loss = last_loss
-        torch.save(model.state_dict(), "../data/model_state/best_val_model.pth")
+        torch.save(model.state_dict(), f"../data/model_state/best_val_model_{model.ID}.pth")
 
 def report_losses(epoch, train_losses, val_losses_std, val_losses_orig, verbosity):
     """
@@ -99,6 +107,7 @@ def train_model(model, optimizer, loss_fn, train_users, train_items, standardize
     """
     Train the model.
     """
+    save_means_stds(model.ID, means, stds)
     best_loss = float('inf')
     train_losses = []
     val_losses_std = []

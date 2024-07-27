@@ -11,6 +11,7 @@ import torch
 from torch import nn
 from config import N_u, N_v, DEVICE
 import torch.nn.functional as F
+import numpy as np
 
 ########## Models ##########
 
@@ -84,16 +85,17 @@ class BaseLightGCN(Model):
 
 class LightGCNPlus(BaseLightGCN):
     def __init__(self, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections):
-        self.projections = projections
+        self.C = projections
         super().__init__(A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate)
+        self.ID = f"{embedding_dim}_{n_layers}_{projections}"
 
         # For reproducibility after training
-        save_model_inputs(A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections)
+        save_model_inputs(self.ID, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections)
 
     def create_mlp(self, dropout_rate):
         layers = []
         input_dim = self.K * 2 * (self.L + 1)
-        for proj in self.projections:
+        for proj in self.C:
             output_dim = self.K * proj
             layers.append(nn.Linear(input_dim, output_dim))
             layers.append(self.act_fn)
@@ -104,7 +106,26 @@ class LightGCNPlus(BaseLightGCN):
     
 ########## Functions ##########
 
-def save_model_inputs(A_tilde, act_fn, K, L, init_embs_std, dropout, projections):
+def save_means_stds(means: np.ndarray, stds: np.ndarray):
+    """
+    Save the means and stds to a file.
+    """
+    path = "../data/model_state/means_stds.npz"
+    with open(path, 'wb') as f:
+        np.savez(f, means=means, stds=stds)
+
+def load_means_stds():
+    """
+    Load the means and stds from a file.
+    """
+    path = "../data/model_state/means_stds.npz"
+    with open(path, 'rb') as f:
+        data = np.load(f)
+        means = data['means']
+        stds = data['stds']
+    return means, stds
+
+def save_model_inputs(ID, A_tilde, act_fn, K, L, init_embs_std, dropout, C):
     """
     Save the model inputs to a dictionary using pickle.
     """
@@ -115,24 +136,25 @@ def save_model_inputs(A_tilde, act_fn, K, L, init_embs_std, dropout, projections
         'L': L,
         'init_embs_std': init_embs_std,
         'dropout': dropout,
-        'projections': projections
+        'projections': C
     }
     # Save dictionary to a file using pickle
-    with open("../data/model_state/model_inputs.pkl", "wb") as f:
+    with open(f"../data/model_state/model_inputs_{ID}.pkl", "wb") as f:
         pickle.dump(model_inputs, f)
 
-def load_best_val_model(model_class: Model) -> Model:
+def load_best_val_model(model_class: Model, ID: str) -> Model:
     """
     Load the best model from a file.
     """
-    model = model_class(*load_model_inputs())
-    model.load_state_dict(torch.load("../data/model_state/best_val_model.pth"))
+    model = model_class(*load_model_inputs(ID))
+    model.load_state_dict(torch.load(f"../data/model_state/best_val_model_{ID}.pth"))
     return model.to(DEVICE)
 
-def load_model_inputs(filename="../data/model_state/model_inputs.pkl"):
+def load_model_inputs(ID: str) -> tuple:
     """
     Load the model inputs from a file using pickle and reconstruct them.
     """
+    filename=f"../data/model_state/model_inputs_{ID}.pkl"
     with open(filename, "rb") as f:
         model_inputs = pickle.load(f)
     
