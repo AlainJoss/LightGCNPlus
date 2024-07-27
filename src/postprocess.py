@@ -82,7 +82,7 @@ def report_training_results(train_rmse, val_rmse_std, val_rmse_orig):
     plt.legend()
     plt.show()
 
-def postprocess(model, means, stds):
+def postprocess(model_class, means, stds):
     """
     Postprocess the model predictions.
     """

@@ -1,5 +1,6 @@
 .DS_Store
 data/.DS_Store
-data/model_state
+data/model_state/best_val_model.pth
+data/model_state/model_inputs.pkl
 papers
 resources
