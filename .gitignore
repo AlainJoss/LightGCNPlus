@@ -1,3 +1,5 @@
 .DS_Store
 data/models/best_val_model.pth
 src/test_dev.ipynb
+data/submission_data/submission.csv
+data/logs/best_val_model.pth
