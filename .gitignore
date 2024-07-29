@@ -7,3 +7,4 @@ papers
 paper
 resources
 data/submission_data/submission.csv
+data/model_state/val_df.csv

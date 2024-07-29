@@ -35,6 +35,8 @@ class BaseLightGCN(Model):
         self.L = n_layers 
         self.act_fn = act_fn
 
+        self.agg_fn = nn.Sigmoid
+
         # Initialize embeddings
         self.E_u = nn.Embedding(num_embeddings=N_u, embedding_dim=self.K)
         self.E_v = nn.Embedding(num_embeddings=N_v, embedding_dim=self.K)
@@ -64,6 +66,7 @@ class BaseLightGCN(Model):
         Aggregate the embeddings from the message passing layers."""
         
         E_agg = torch.cat(embs, dim=1)
+        E_agg = self.agg_fn(E_agg)
         return E_agg
     
     def select_embeddings(self, users, items, E_agg):
