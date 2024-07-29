@@ -95,16 +95,12 @@ def postprocess(model_class, ID):
     submission_users, submission_items = load_submission_users_items()
     # Load model inputs
     model = load_best_val_model(model_class, ID)
-    model.eval()
     # Get predictions for submission
-    final_ratings = model.get_ratings(submission_users, submission_items).cpu().detach().numpy()
-    
-    report_submission_results(final_ratings, "raw")
-
-    means, stds = load_means_stds(ID)
     
     raw_predicted_ratings = model.get_ratings(submission_users, submission_items).detach().cpu().numpy()
+    report_submission_results(raw_predicted_ratings, "raw")
     raw_submission_matrix = create_submission_matrix(raw_predicted_ratings, submission_users, submission_items)
+    means, stds = load_means_stds(ID)
     submission_matrix = reverse_standardize(raw_submission_matrix, means, stds)
     prediction_ratings = submission_matrix[submission_users, submission_items]
     

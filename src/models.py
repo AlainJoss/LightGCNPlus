@@ -16,8 +16,9 @@ import numpy as np
 ########## Models ##########
 
 class Model(nn.Module):
-    def __init__(self):
-        super(Model, self).__init__()
+    def __init__(self, ID):
+        super().__init__()
+        self.ID = ID
 
     def forward(self, users, items):
         raise NotImplementedError("Derived classes must implement this method")
@@ -26,8 +27,8 @@ class Model(nn.Module):
         return self.forward(users, items)
 
 class BaseLightGCN(Model):
-    def __init__(self, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate):
-        super(BaseLightGCN, self).__init__()
+    def __init__(self, ID, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate):
+        super().__init__(ID)
 
         self.A_tilde = A_tilde  # normalized adjacency matrix
         self.K = embedding_dim
@@ -85,13 +86,27 @@ class BaseLightGCN(Model):
 
 class LightGCNPlus(BaseLightGCN):
     def __init__(self, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections):
+        ID = f"{embedding_dim}_{n_layers}_{projections}"
         self.C = projections
-        super().__init__(A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate)
-        self.ID = f"{embedding_dim}_{n_layers}_{projections}"
+        super().__init__(ID, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate)
 
-        # For reproducibility after training
-        save_model_inputs(self.ID, A_tilde, act_fn, embedding_dim, n_layers, init_emb_std, dropout_rate, projections)
-
+    def save_model_inputs(self):
+        """
+        Save the model inputs to a dictionary using pickle.
+        """
+        model_inputs = {
+            'A_tilde': self.A_tilde,  # Tensor
+            'act_fn': self.act_fn,  # Activation function
+            'K': self.K,
+            'L': self.L,
+            'init_embs_std': self.init_embs_std,
+            'dropout': self.dropout,
+            'projections': self.C
+        }
+        # Save dictionary to a file using pickle
+        with open(f"../data/model_state/model_inputs_{self.ID}.pkl", "wb") as f:
+            pickle.dump(model_inputs, f)
+    
     def create_mlp(self, dropout_rate):
         layers = []
         input_dim = self.K * 2 * (self.L + 1)
@@ -106,49 +121,15 @@ class LightGCNPlus(BaseLightGCN):
     
 ########## Functions ##########
 
-def save_means_stds(means: np.ndarray, stds: np.ndarray):
-    """
-    Save the means and stds to a file.
-    """
-    path = "../data/model_state/means_stds.npz"
-    with open(path, 'wb') as f:
-        np.savez(f, means=means, stds=stds)
-
-def load_means_stds():
-    """
-    Load the means and stds from a file.
-    """
-    path = "../data/model_state/means_stds.npz"
-    with open(path, 'rb') as f:
-        data = np.load(f)
-        means = data['means']
-        stds = data['stds']
-    return means, stds
-
-def save_model_inputs(ID, A_tilde, act_fn, K, L, init_embs_std, dropout, C):
-    """
-    Save the model inputs to a dictionary using pickle.
-    """
-    model_inputs = {
-        'A_tilde': A_tilde,  # Tensor
-        'act_fn': act_fn,  # Activation function
-        'K': K,
-        'L': L,
-        'init_embs_std': init_embs_std,
-        'dropout': dropout,
-        'projections': C
-    }
-    # Save dictionary to a file using pickle
-    with open(f"../data/model_state/model_inputs_{ID}.pkl", "wb") as f:
-        pickle.dump(model_inputs, f)
-
 def load_best_val_model(model_class: Model, ID: str) -> Model:
     """
     Load the best model from a file.
     """
     model = model_class(*load_model_inputs(ID))
     model.load_state_dict(torch.load(f"../data/model_state/best_val_model_{ID}.pth"))
-    return model.to(DEVICE)
+    model = model.to(DEVICE)
+    model.eval()
+    return model
 
 def load_model_inputs(ID: str) -> tuple:
     """

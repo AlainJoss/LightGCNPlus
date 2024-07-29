@@ -107,7 +107,9 @@ def train_model(model, optimizer, loss_fn, train_users, train_items, standardize
     """
     Train the model.
     """
-    save_means_stds(model.ID, means, stds)
+    if save_best_model:
+        save_means_stds(model.ID, means, stds)
+        model.save_model_inputs()
     best_loss = float('inf')
     train_losses = []
     val_losses_std = []
