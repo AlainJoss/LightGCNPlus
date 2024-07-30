@@ -3,13 +3,15 @@
 %\usepackage{times}
 %\usepackage{balance}
 \usepackage{url}
+\usepackage{xcolor}
 \usepackage{graphicx}	% For figure environment
-\usepackage{amssymb}   % For blackboard bold symbols
-\usepackage{amsmath}   % For mathematical environments like bmatrix
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{hyperref}
 
 
 \begin{document}
-\title{LightGCNPlus \\ A Graph Convolutional Network for Matrix Completion}
+\title{LightGCN+ \\ A Graph Convolutional Network for Matrix Completion}
 
 \author{
   Alain Joss \\
@@ -27,9 +29,9 @@
   predicting ratings can provide deeper insights into user preferences, 
   thus improving decision-making across various use cases.
   
-  In this work, we propose LightGCNPlus, a graph convolutional encoder-decoder network designed to predict ratings for unobserved user-item interactions, 
+  In this work, we propose LightGCN+, a graph convolutional encoder-decoder network designed to predict ratings for unobserved user-item interactions, 
   extending the original LightGCN model. 
-  LightGCNPlus incorporates the message passing logic of LightGCN in its hidden layer, adapting it to handle a set of real valued user-item ratings, rather than binary user-item interactions.
+  LightGCN+ incorporates the message passing logic of LightGCN in its hidden layer, adapting it to handle a set of real valued user-item ratings, rather than binary user-item interactions.
   The decoder then concatenates these representations and passes them through a multi-layer perceptron (MLP) to predict ratings, rather than just ranking items. 
   This approach enhances the model's ability to deliver accurate and personalized recommendations.
 \end{abstract}
@@ -37,7 +39,9 @@
 
 \section{Introduction}
 
-Collaborative filtering refers to the task of predicting user ratings of items by leveraging past relationships between users and items. Traditional methods of accomplishing the task include matrix factorization (Alternating Least Squares) and Neural Network methods. However, we believe that a graph-based approach that more explicitly models the interaction between users and items may perform better than these standards.
+Collaborative filtering refers to the task of predicting user ratings of items by leveraging past relationships between users and items. Traditional methods of accomplishing this task include matrix factorization (Alternating Least Squares) and Neural Network methods. 
+Recent surveys \cite{} have highlighted the effectiveness of matrix completion methods in recommendation systems, outlining the mathematical models and computational algorithms involved, as well as their applications beyond traditional recommendations
+However, we believe that a graph-based approach may perform better than these standards as it models the interaction between users and items more explicitly.
 
 Recent advancements in graph-based models have made the utility of graph-based methods apparent. Graph Convolutional Networks (GCNs), in particular, have been applied to collaborative filtering and recommendation systems with great success. By modeling user-item interactions as a bipartite graph, it is possible to apply GCN methodology to this problem. Previous work in \cite{van2017graph} showed state of the art performance using a graph auto-encoder and bilinear decoder on popular movie rating datasets.
 
@@ -47,8 +51,9 @@ In short: we represent user-item interactions in a bipartite graph and introduce
 
 \section{Model and Methods}
 \subsection{Problem Formulation}
-Given a partially observed (sparse) user-item rating matrix $R \in \mathbb{R}^{m \times n}$, the task of matrix completion consists of predicting the missing ratings in $R$.
-where $m$ is the number of users and $n$ is the number of items, we construct a bipartite graph $G = (U, I, E)$, where $U$ and $I$ are the sets of users and items, respectively, and $E$ is the set of edges connecting users to items.
+Given a partially observed (sparse) user-item rating matrix $R \in \mathbb{R}^{m \times n}$, where $m$ is the number of users and $n$ is the number of items, the task of matrix completion consists of predicting the missing ratings in $R$.
+To tackle the problem using graph-based methods, the first step is to represent the user-item interactions as a bipartite graph.
+ we construct a bipartite graph $G = (U, I, E)$, where $U$ and $I$ are the sets of users and items, respectively, and $E$ is the set of edges connecting users to items.
 The adjacency matrix $A \in \mathbb{R}^{(m+n) \times (m+n)}$ of the graph $G$ is defined as:
 \begin{equation}
     A = \begin{bmatrix}
@@ -67,11 +72,18 @@ Subsequently, we define the standardized adjacency matrix $\hat{A}$ as:
 Z_{\text{row}}^T & 0
 \end{bmatrix}
 \]
-(To write in results the interpretations and that it radically improves the performance, also that it is different to traditional standardization over just $R_u$).
+We find that standardizing ratings, specifically by computing $Z_{\text{col}}$ and $Z_{\text{row}}$, greatly enhances the model's generalization to unobserved user-item interactions.
+
+The rationale behind this preprocessing step, is that standardizing across columns makes items comparable, while standardization across rows makes users comparable. 
+For example, if an item is highly rated by all users, it indicates that the item is generally well-received, and this information is captured uniformly across the dataset through \( Z_{\text{col}} \). 
+Conversely, if a particular user consistently rates items highly, \( Z_{\text{row}} \) adjusts for this user's rating tendency, allowing the model to focus on the relative preferences of the user rather than their absolute rating scale. 
+This dual standardization process helps in mitigating biases and variances inherent in user and item ratings, leading to more robust and accurate predictions.
+
+This insight is key for the effectiveness of the convolution operation defined in the next section, and more broadly to the overall model's performance.
 
 \subsection{Encoder}
 \subsubsection{Graph Convolution}
-The encoder of LightGCNPlus inherits the graph convolution (message passing logic) from the LightGCN model.
+The encoder of LightGCN+ inherits the graph convolution (message passing logic) from the LightGCN model.
 The graph convolution operation propagates information across the graph, updating the hidden representation of each node based on its neighbors.
 Using multiple layers of graph convolution allows the model to capture higher-order relationships between users and items.
 We adapt the graph convolution operation to handle real valued user-item ratings, such that
@@ -81,13 +93,14 @@ for a given node $v$, the hidden representation $h_v^{(l+1)}$ at layer $l+1$ is 
     h_i^{(l+1)} &= \sum_{u \in N(i)} \frac{z_{\text{row}_{u,i}}}{\sqrt{|N(u)||N(i)|}} h_u^{(l)}  \quad \forall i \in I
 \end{align}
 where $N(v)$ is the set of neighbors of node $v$, $z_{u,i}$ is the edge weight (standardized rating) between user $u$ and item $i$, and $h_v^{(l)}$ is the hidden representation of node $v$ at layer $l$.
-The hidden representations $h_v^{(0)}$ at the input layer represent the learnable embeddings of node $v$. Finally, the symmetrical normalization term $\sqrt{|N(u)||N(i)|}$ ensures that the hidden representations are scaled appropriately. Other choices of normalization are possible.
+The hidden representations $h_v^{(0)}$ at the input layer represent the learnable embeddings of node $v$. Finally, the symmetrical normalization term $\sqrt{|N(u)||N(i)|}$ ensures that the hidden representations are scaled appropriately. 
 
-The $L$-layer graph convolution operation can be expressed more compactly in terms of matrix operations as:
+The $L$-layer graph convolution operation can be expressed more compactly in terms of matrix multiplications as:
 \begin{equation}
     H^{(l+1)} = \tilde{A} H^{(l)}
 \end{equation}
 where $\tilde{A} = D^{-\frac{1}{2}} \hat{A} D^{-\frac{1}{2}}$ is the normalized standardized-adjacency matrix, $D$ is the diagonal degree matrix of $\hat{A}$, and $H^{(l)}$ is the matrix of hidden representations at layer $l$.
+
 \subsubsection{Aggregator}
 After $L$ layers of graph convolution, the hidden representations $h_v^{(l)}$ of node $v$ are aggregagated to obtain the final representations.
 To maximize the expressiveness of the model, we aggregate the hidden representations by concatenating them along the feature dimension, 
@@ -98,14 +111,14 @@ resulting in the final representation $h_v$:
 This choice is justified by the use of a multi-layer perceptron (MLP) in the decoder, which can take advantage of the concatenation aggregation, in contrast to other aggregation methods such as summation or averaging.
 
 \subsection{Decoder}
-The decoder of LightGCNPlus is a multi-layer perceptron (MLP) that takes the concatenated hidden representations $h_u$ and $h_i$ of user $u$ and item $i$ couples as input, and outputs the predicted rating $\hat{r}_{u,i}$:
+The decoder of LightGCN+ is a multi-layer perceptron (MLP) that takes the concatenated hidden representations $h_u$ and $h_i$ of user $u$ and item $i$ couples as input, and outputs the predicted rating $\hat{r}_{u,i}$:
 \begin{equation}
     \hat{r}_{u,i} = \text{MLP}(\text{concat}(h_u, h_i))
 \end{equation}
 The specific choice of the MLP's architecture is a hyperparameter of the overall model.
 
 \subsection{Training}
-The training objective of LightGCNPlus is to predict the ratings of the observed user-item interactions in the training set $\Omega$.
+The training objective of LightGCN+ is to predict the ratings of the observed user-item interactions in the training set $\Omega$.
 The learnable parameters of the model $W$ comprise the embeddings of users and items and the weights of the MLP, and are trained end-to-end using the Adam optimizer.
 We initialize the embeddings using a normal distribution, with tunable standard deviation $\sigma_{\text{init}}$, and the weights of the MLP using the Xavier initialization.
 As loss function we use the mean squared error (MSE) between the predicted ratings $\hat{R}$ and the true ratings $R$:
@@ -117,8 +130,10 @@ In addition to weight decay, to regularize the model we apply dropout to the MLP
 Finally, we avoid mini-batching to ensure that the model can learn the global structure of the graph, concurrently speeding up convergence.
 
 \subsection{Tuning}
-The hyperparameters of LightGCNPlus include the number of layers $L$, the dimensionality of the hidden representations $K$, the learning rate $\eta$, the weight decay regularization strength $\lambda$, the dropout rate $p$, and the hyperparameters of the MLP.
+The hyperparameters of LightGCN+ include the number of layers $L$, the dimensionality of the hidden representations $K$, the learning rate $\eta$, the weight decay regularization strength $\lambda$, the dropout rate $p$, and the hyperparameters of the MLP.
 The MLP's hyperparameters consists of $\sigma_{\text{init}}$, the number of hidden layers, the number of units per hidden layer, and the activation function $f$.
+
+\textcolor{red}{Here we start speaking about the specific experiments on the data}
 
 After performing an initial grid search, we narrow the search-space by fixing following hyperparameters: $K=28$, $\eta=0.01$, $p=0.5$, and $\lambda=0.00005$, $\sigma_{\text{init}}=0.075$, and $f=\text{GELU}$.
 
@@ -137,278 +152,60 @@ We cap the number of models in the ensemble at $M=10$ to prevent overfitting.
 To ensure that the predictions are within the valid rating range, we clip the predictions to the interval $[1, 5]$.
 
 
-\subsection{Design Choices}
-
-
 \section{Experiments}
+\subsection{Dataset}
+We evaluate the performance of LightGCN+ on the MovieLens 100K dataset, a widely used benchmark dataset for collaborative filtering tasks.
+The dataset consists of 100,000 ratings from 943 users on 1682 movies, with ratings ranging from 1 to 5.
+We split the dataset into training, validation, and test sets, with $80$ perc of the ratings used for training, $10$ perc for validation, and $10$ perc for testing.
 
+\subsection{Design Choices}
+We experiment with different design choices to evaluate the impact of each on the model's performance.
+\subsubsection{Matrix Standardization}
+\subsubsection{Graph Convolution}
+In the multi-layer graph convolution, different normalization techniques can be applied to the standardized adjacency matrix $\hat{A}$.
+For example, it would be possible to normalize using the inverse degree matrix $D^{-1}$, or learn normalization parameters $\alpha_{u,i}$ and $\beta_{u,i}$ for each edge.
+To this end, the GAT \cite{velivckovic2018graph} attention mechanism could be used. 
+We decide to apply symmetric normalization, following the simplicity philosophy of the original LightGCN.
+\subsubsection{Layer Aggregation}
+\subsubsection{MLP Architecture}
+In the graph convolution we experiment with different normalization techniques, including symmetric normalization, row normalization, and column normalization.
 
-\subsection{Models and Methods}
-The models and methods
-section should describe what was
-done to answer the research question, describe how it was done,
-justify the experimental design, and
-explain how the results were analyzed.
+\subsection{Model Discovery Process}
 
-The model refers to the underlying mathematical model or structure which 
-you use to describe your problem, or that your solution is based on. 
-The methods on the other hand, are the algorithms used to solve the problem. 
-In some cases, the suggested method directly solves the problem, without having it 
-stated in terms of an underlying model. Generally though it is a better practice to have 
-the model figured out and stated clearly, rather than presenting a method without specifying 
-the model. In this case, the method can be more easily evaluated in the task of fitting 
-the given data to the underlying model.
+\section{Results}
+\label{sec:tips-writing}
 
-The methods part of this section, is not a step-by-step, directive,
-protocol as you might see in your lab manual, but detailed enough such
-that an interested reader can reproduce your
-work~\cite{anderson04,wavelab}.
+\textcolor{red}{Hyper params, rmse, different methods attempted, graphics showing loss etc.}
 
-The methods section of a research paper provides the information by
-which a study's validity is judged.
-Therefore, it requires a clear and precise description of how an
-experiment was done, and the rationale
-for why specific experimental procedures were chosen.
-It is usually helpful to
-structure the methods section by~\cite{kallet04methods}:
-\begin{enumerate}
-\item Layout the model you used to describe the problem or the solution.
-\item Describing the algorithms used in the study, briefly including
-  details such as hyperparameter values (e.g. thresholds), and
-  preprocessing steps (e.g. normalizing the data to have mean value of
-  zero).
-\item Explaining how the materials were prepared, for example the
-  images used and their resolution.
-\item Describing the research protocol, for example which examples
-  were used for estimating the parameters (training) and which were
-  used for computing performance.
-\item Explaining how measurements were made and what
-  calculations were performed. Do not reproduce the full source code in
-  the paper, but explain the key steps.
-\end{enumerate}
+At first, we achieved the best results with the following hyperparameters:
 
-\subsection{Results}
+\textcolor{red}{include them in a list, give the relevant score}
 
-Organize the results section based on the sequence of table and
-figures you include. Prepare the tables and figures as soon as all
-the data are analyzed and arrange them in the sequence that best
-presents your findings in a logical way. A good strategy is to note,
-on a draft of each table or figure, the one or two key results you
-want to address in the text portion of the results.
-The information from the figures is
-summarized in Table~\ref{tab:fourier-wavelet}.
+Following this initial breakthrough, we searched over a parameter grid to find the best set, which led us to increase the number of layers $L$. This was initially unsuccessful for us as we didn't allow the model to train for enough epochs. However, following intuition, more layers allow for better aggregation of information by each node and therefore a more accurate prediction of the rating a user will give to an item. \textcolor{red}{and other stuff}
 
-\begin{table*}[htbp]
-  \centering
-  \begin{tabular}[c]{|l||l|l|l|}
-    \hline
-    Basis&Support&Suitable signals&Unsuitable signals\\
-    \hline
-    Fourier&global&sine like&localized\\
-    wavelet&local&localized&sine like\\
-    \hline
-  \end{tabular}
-  \caption{Characteristics of Fourier and wavelet basis.}
-  \label{tab:fourier-wavelet}
-\end{table*}
+\subsection{Baselines}
 
-When reporting computational or measurement results, always
-report the mean (average value) along with a measure of variability
-(standard deviation(s) or standard error of the mean).
+To assess the value our solution adds to the field of collaborative filtering, we compare it's performance against that of some standard models.
 
+\subsubsection{Alternating Least Squares}
 
-\section{Tips for Good Software}
+Alternating Least Squares (ALS) turns an otherwise quartic matrix factorization problem into one that is only quadratic by alternating between optimizing the user matrix while holding the item matrix constant and vice versa. When applied to the public test set, it achieved a RMSE score of 1.426
+
+\subsubsection{Neural Collaborative Filtering}
+
+Our Neural Collaborative Filtering (NCF) model is fairly vanilla. We used two embedding layers followed by a feed forward neural network. The ReLU activation function was used at all layers besides the final layer. We trained using the Adam optimizer with a learning rate of 0.001, MSE loss, and embedding dimension 16. After 25 epochs, this model achieved a RMSE score of 1.094 on the public test set.
+
+\section{Discussion}
 \label{sec:tips-software}
 
-There is a lot of literature (for example~\cite{hunt99pragmatic} and
-\cite{spolsky04software}) on how to write software. It is not the
-intention of this section to replace software engineering
-courses. However, in the interests of reproducible
-research~\cite{schwab00}, there are a few guidelines to make your
-reader happy:
-\begin{itemize}
-\item Have a \texttt{README} file that (at least) describes what your
-  software does, and which commands to run to obtain results. Also
-  mention anything special that needs to be set up, such as
-  toolboxes\footnote{For those who are
-  particularly interested, other common structures can be found at
-  \url{http://en.wikipedia.org/wiki/README} and
-  \url{http://www.gnu.org/software/womb/gnits/}.}.
-\item A list of authors and contributors can be included in a file
-  called \texttt{AUTHORS}, acknowledging any help that you may have
-  obtained. For small projects, this information is often also
-  included in the \texttt{README}.
-\item Use meaningful filenames, and not \texttt{temp1.m},
-  \texttt{temp2.m}. The code should also unzip into a subdirectory.
-\item Document your code. Each file should at least have a short
-  description about its reason for existence. Non obvious steps in the
-  code should be commented.
-\item Describe how the results presented in your paper can potentially
-  be reproduced.
-\end{itemize}
+Strengths and weaknesses. 
 
-
-\section{Computational Intelligence Laboratory Requirements}
-\label{sec:cil}
-
-Your semester project is a group effort. It consists of four parts:
-\begin{enumerate}
-\item The programming assignments you solve during the semester.
-\item Developing a novel solution for one of the assignments, e.g. by
-  combining methods from previous programming assignments into a novel
-  solution.
-\item Comparing your novel solution to previous assignments.
-\item Writing up your findings in a short scientific paper.
-\end{enumerate}
-
-\subsection{Developing a Novel Solution}
-
-As your final programming assignment, you develop a novel solution to
-one of the four application problems. You are free to exploit any idea
-you have, provided it is not identical to any other group submission
-or existing Matlab implementation of an algorithm on the
-internet\footnote{\url{http://www.ethz.ch/students/semester/plagiarism_s_en.pdf}}.
-
-Two examples for developing a novel solution:
-\begin{itemize}
-\item You implemented a collaborative filtering algorithm based on
-  dimension reduction as part of an assignment. Now you apply
-  dimension reduction to inpainting.
-\item You implemented both a clustering and a sparse coding algorithm
-  for image compression. Now you combine both techniques into a novel
-  compression method.
-\end{itemize}
-
-\subsection{Comparison to Baselines}
-
-You compare your novel algorithm to \emph{at least two baseline
-  algorithms}. For the baselines, you can use the implementations you
-developed as part of the programming assignments.
-
-
-\subsection{Write Up}
-
-The submission must be in PDF form, using the \LaTeX{} template
-corresponding to the IEEE style of publication. Refer to
-Section~\ref{sec:latex-primer} for more information about preparing
-your document. The document should be a maximum of {\bf 4 pages}.
-
-\subsection{\LaTeX{} Primer}
-\label{sec:latex-primer}
-
-\LaTeX{} is one of the most commonly used document preparation systems
-for scientific journals and conferences. It is based on the idea
-that authors should be able to focus on the content of what they are
-writing without being distracted by its visual presentation.
-The source of this file can be used as a starting point for how to use
-the different commands in \LaTeX{}. We are using an IEEE style for
-this course.
-
-\subsubsection{Installation}
-
-There are various different packages available for processing \LaTeX{}
-documents.
-On Windows, use the Mik\TeX{} package (\url{http://miktex.org/}), and
-on OSX use MacTeX
-(\url{http://www.tug.org/mactex/2009/}). Alternatively, on OSX, you
-can install the \texttt{tetex} package via
-Fink\footnote{\url{http://www.finkproject.org/}} or 
-Macports\footnote{\url{http://www.macports.org/}}.
-
-\subsubsection{Compiling \LaTeX{}}
-Your directory should contain at least 4 files, in addition to image
-files. Images should be in \texttt{.png}, \texttt{.jpg} or
-\texttt{.pdf} format.
-\begin{itemize}
-\item IEEEtran.cls
-\item IEEEtran.bst
-\item groupXX-submission.tex
-\item groupXX-literature.bib
-\end{itemize}
-Note that you should replace groupXX with your chosen group name.
-Then, from the command line, type:
-\begin{verbatim}
-$ pdflatex groupXX-submission
-$ bibtex groupXX-literature
-$ pdflatex groupXX-submission
-$ pdflatex groupXX-submission
-\end{verbatim}
-This should give you a PDF document \texttt{groupXX-submission.pdf}.
-
-\subsubsection{Equations}
-
-There are three types of equations available: inline equations, for
-example $y=mx + c$, which appear in the text, unnumbered equations
-$$y=mx + c,$$
-which are presented on a line on its own, and numbered equations
-\begin{equation}
-  \label{eq:linear}
-  y = mx + c
-\end{equation}
-which you can refer to at a later point (Equation~(\ref{eq:linear})).
-
-\subsubsection{Tables and Figures}
-
-Tables and figures are ``floating'' objects, which means that the text
-can flow around it.
-Note
-that \texttt{figure*} and \texttt{table*} cause the corresponding
-figure or table to span both columns.
-
-
-\subsection{Grading}
-
-There are two different types of grading criteria applied to your
-project, with the corresponding weights shown in brackets.
-\begin{description}
-\item[Competitive] \ \\
-  The following criteria is scored based on your rank
-  in comparison with the rest of the class.
-  \begin{itemize}
-  \item time taken for computation (10\%)
-  \item average rank for all other criteria relevant to the task, for
-    example reconstruction error and sparsity (20\%)
-  \end{itemize}
-  The ranks will then be converted on a linear scale into a grade
-  between 4 and 6.
-\item[Non-competitive] \ \\
-  The following criteria is scored based on an
-  evaluation by the teaching assistants.
-  \begin{itemize}
-  \item quality of paper (30\%)
-  \item quality of implementation (20\%)
-  \item creativity of solution (20\%)
-  \end{itemize}
-\end{description}
-
-\subsection{Submission System}
-
-The deadline for submitting your project report is Friday, 22 June
-2012.
-You need to submit:
-\begin{itemize}
-\item PDF of paper.
-\item Archive (\texttt{.tar.gz} or \texttt{.zip}) of software. Please
-  do not forget to include author information in the source archive.
-\end{itemize}
-
-\textbf{Important:} Please check the submission instructions on the webpage 
-as it is the most updated instructions. 
 
 \section{Summary}
 
-The aim of a scientific paper is to convey the idea or discovery of
-the researcher to the minds of the readers. The associated software
-package provides the relevant details, which are often only briefly
-explained in the paper, such that the research can be reproduced.
-To write good papers, identify your key idea, make your contributions
-explicit, and use examples and illustrations to describe the problems
-and solutions.
-
-\section*{Acknowledgements}
-The author thanks Christian Sigg for his careful reading and helpful
-suggestions.
+Our model expands on the work done in [1] for recommender systems by adapting the LightGCN architecture for use in collaborative filtering tasks. We accomplish this by including the standardized user-item rating in the aggregation step (i.e. when updating node embeddings) and passing the resulting pairs of concatenated user-item embeddings through a MLP to generate a prediction. This model significantly outperforms standard baseline models for the same task and achieves impressive results on real data.
 
 \bibliographystyle{IEEEtran}
 \bibliography{howto-paper}
+
 \end{document}
