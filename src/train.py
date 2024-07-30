@@ -91,6 +91,8 @@ def train_model(model, optimizer, loss_fn, train_users, train_items, train_ratin
         val_loss = evaluate_one_epoch(model, loss_fn, val_users, val_items, val_ratings)
         if save_best_model:
             best_loss = save_model_on_val_improvement(model, best_loss, val_loss)
+        if val_loss < best_loss:
+            best_loss = val_loss # quick fix to make it work with save_best_val = False
         train_losses.append(train_loss)
         val_losses.append(val_loss)
         report_losses(epoch, train_losses, val_losses, best_loss,  verbosity)
