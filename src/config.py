@@ -1,3 +1,8 @@
+"""
+This script ensures GPU usage, sets the dimension for the rating matrices on which we train and test,
+gives the path to save data, and determines the validation split
+"""
+
 import torch
 
 if torch.backends.mps.is_available():
