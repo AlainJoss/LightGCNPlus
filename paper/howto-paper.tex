@@ -34,7 +34,16 @@
   This approach enhances the model's ability to deliver accurate and personalized recommendations.
 \end{abstract}
 
+
 \section{Introduction}
+
+Collaborative filtering refers to the task of predicting user ratings of items by leveraging past relationships between users and items. Traditional methods of accomplishing the task include matrix factorization (Alternating Least Squares) and Neural Network methods. However, we believe that a graph-based approach that more explicitly models the interaction between users and items may perform better than these standards.
+
+Recent advancements in graph-based models have made the utility of graph-based methods apparent. Graph Convolutional Networks (GCNs), in particular, have been applied to collaborative filtering and recommendation systems with great success. By modeling user-item interactions as a bipartite graph, it is possible to apply GCN methodology to this problem. Previous work in \cite{van2017graph} showed state of the art performance using a graph auto-encoder and bilinear decoder on popular movie rating datasets.
+
+In this paper, we propose a novel approach to collaborative filtering using GCNs. Our model is inspired by the LightGCN \cite{he2020lightgcn} architecture that saw commendable success when applied to recommendation systems. We adapt the previously proposed model by considering user-item rating when computing user and item embeddings. We then employ MLP architecture to get output from high-dimensional concatenated embeddings. Finally, we ensemble multiple trained models with different hyperparameters and stochastic instantiations via weighted combination to decrease prediction variance and increase performance on unseen data.
+
+In short: we represent user-item interactions in a bipartite graph and introduce a GCN-based model adapted for matrix completion tasks in collaborative filtering, we perform rigorous experiments to show the effectiveness of our model compared with standard collaborative filtering baselines, and we give a thorough analysis of the model's performance by discussing the significance of hyperparameter selection and architectural design decisions.
 
 \section{Model and Methods}
 \subsection{Problem Formulation}
@@ -126,6 +135,10 @@ The weights are determined by splitting the validation set into a set for fittin
 We cap the number of models in the ensemble at $M=10$ to prevent overfitting.
 \subsubsection{Postprocessing}
 To ensure that the predictions are within the valid rating range, we clip the predictions to the interval $[1, 5]$.
+
+
+\subsection{Design Choices}
+
 
 \section{Experiments}
 
