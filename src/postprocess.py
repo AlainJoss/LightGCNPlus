@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
+
 from config import N_u, N_v
 from load import load_submission_users_items
 from models import load_best_val_model
@@ -14,9 +15,6 @@ from models import load_best_val_model
 ########## Functions ##########
 
 def load_means_stds(ID: str) -> tuple:
-    """
-    Load the means and stds from a file.
-    """
     path = f"../data/model_state/means_stds_{ID}.npz"
     with open(path, 'rb') as f:
         data = np.load(f)
@@ -24,7 +22,7 @@ def load_means_stds(ID: str) -> tuple:
         stds = data['stds']
     return means, stds
 
-def report_submission_results(final_ratings, rating_type):
+def report_submission_results(final_ratings: np.ndarray, rating_type: str) -> None:
     # Check min and max of final_ratings
     print("min:", final_ratings.min())
     print("max:", final_ratings.max())
@@ -57,57 +55,48 @@ def create_submission_matrix(predicted_ratings, submission_users, submission_ite
     
     return submission_matrix
 
-def reverse_standardize(submission_matrix, means, stds) -> torch.Tensor:
-    reversed_ratings = submission_matrix * stds + means
-    return reversed_ratings
-
 def to_submission_format(users, movies, predictions):
     return pd.DataFrame(data={'Id': ['r{}_c{}'.format(user + 1, movie + 1) for user, movie in zip(users, movies)],
                               'Prediction': predictions})
 
 ########## Main ##########
 
-def report_training_results(train_rmse, val_rmse_std, val_rmse_orig):
+def report_training_results(train_rmse, val_rmse):
     # Replace values above 1 with 1 in the rmse lists
     train_rmse_plot = [min(1, x) for x in train_rmse]
-    val_rmse_std_plot = [min(1, x) for x in val_rmse_std]
-    val_rmse_orig_plot = [min(1, x) for x in val_rmse_orig]
+    val_rmse_plot = [min(1, x) for x in val_rmse]
 
-    plt.title("Training Results")
     # Plot train and val rmse
+    plt.title("Training Results")
     plt.plot(train_rmse_plot, label='train')
-    plt.plot(val_rmse_std_plot, label='val std')
-    plt.plot(val_rmse_orig_plot, label='val orig')
+    plt.plot(val_rmse_plot, label='val')
     plt.plot()
-
     # Annotate min val loss
-    plt.annotate(round(min(val_rmse_orig_plot), 4), (val_rmse_orig_plot.index(min(val_rmse_orig_plot)), min(val_rmse_orig_plot)), textcoords="offset points", xytext=(0,-10), ha='center')
+    plt.annotate(round(min(val_rmse_plot), 4), (val_rmse_plot.index(min(val_rmse_plot)), min(val_rmse_plot)), textcoords="offset points", xytext=(0,-10), ha='center')
+    plt.axhline(y=min(val_rmse_plot), color='r', linestyle='--')
     plt.xlabel("Epoch")
     plt.ylabel("RMSE")
     plt.legend()
     plt.show()
 
-def postprocess(model_class, ID):
+def postprocess_report_submit(model_class, ID):
     """
     Postprocess the model predictions.
     """
-    # Read model that achieved best validation loss
-    submission_users, submission_items = load_submission_users_items()
-    # Load model inputs
+    sub_users, sub_items = load_submission_users_items()
     model = load_best_val_model(model_class, ID)
-    # Get predictions for submission
-    
-    raw_predicted_ratings = model.get_ratings(submission_users, submission_items).detach().cpu().numpy()
-    report_submission_results(raw_predicted_ratings, "raw")
-    raw_submission_matrix = create_submission_matrix(raw_predicted_ratings, submission_users, submission_items)
-    means, stds = load_means_stds(ID)
-    submission_matrix = reverse_standardize(raw_submission_matrix, means, stds)
-    prediction_ratings = submission_matrix[submission_users, submission_items]
-    
-    report_clip_data(prediction_ratings)
-    prediction_ratings = np.clip(prediction_ratings, 1, 5)
 
-    report_submission_results(prediction_ratings, "clipped")
+    # Get predictions from model for submission users and items
+    raw_pred_ratings = model.get_ratings(sub_users, sub_items).detach().cpu().numpy()
+    raw_submission_matrix = create_submission_matrix(raw_pred_ratings, sub_users, sub_items)
+    pred_ratings = raw_submission_matrix[sub_users, sub_items]
+    pred_ratings = np.clip(pred_ratings, 1, 5)
 
-    submission = to_submission_format(submission_users, submission_items, prediction_ratings)
+    # Report results
+    report_submission_results(raw_pred_ratings, "raw")
+    report_clip_data(pred_ratings)
+    report_submission_results(pred_ratings, "clipped")
+
+    # Generate submission file
+    submission = to_submission_format(sub_users, sub_items, pred_ratings)
     submission.to_csv('../data/submission_data/submission.csv', index=False)

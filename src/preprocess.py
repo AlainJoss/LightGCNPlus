@@ -9,6 +9,9 @@ This involves the following steps:
     - Returning the normalized adjacency matrix and the train/val data for training.
 """
 
+
+# TODO: test create bipartite graph
+
 ########## Imports ##########
 import pandas as pd
 import numpy as np
@@ -24,32 +27,31 @@ def extract_users_items_ratings(df):
     """
     users, movies = [np.squeeze(arr) for arr in np.split(df.Id.str.extract('r(\d+)_c(\d+)').values.astype(int) - 1, 2, axis=-1)]
     ratings = df.Prediction.values
-
     return users, movies, ratings
 
 
-def standardize_excluding_zeros(rating_matrix: np.ndarray, mask: np.ndarray) -> tuple:
+def standardize(rating_matrix: np.ndarray, mask: np.ndarray, axis: int) -> np.ndarray:
     """
     Standardize ratings excluding unobserved values (zeros).
     """
     # Compute means and stds of non-zero elements
-    sums = np.sum(rating_matrix * mask, axis=0, keepdims=True)
-    counts = np.sum(mask, axis=0, keepdims=True)
+    sums = np.sum(rating_matrix * mask, axis=axis, keepdims=True)
+    counts = np.sum(mask, axis=axis, keepdims=True)
     means = sums / counts
-    variances = np.sum(((rating_matrix - means) * mask) ** 2, axis=0, keepdims=True) / counts
+    variances = np.sum(((rating_matrix - means) * mask) ** 2, axis=axis, keepdims=True) / counts
     stds = np.sqrt(variances)
-    standardized_ratings = (rating_matrix - means) / stds
 
-    # Preserve original zeros
-    standardized_ratings[~mask] = 0  
+    # Standardize the ratings matrix
+    z_score_ratings = (rating_matrix - means) / stds
 
-    # For simplicity make matrix of means and stds with same shape as ratings
-    means = np.repeat(means, rating_matrix.shape[0], axis=0)
-    stds = np.repeat(stds, rating_matrix.shape[0], axis=0)
+    # Overwrite unobserved values with zeros.
+    # These values will not be used in training, but will still be used when computing A_tilde.
+    # Thus, we still need them to have values, which do mean something different to zero in the standardized space.
+    z_score_ratings[~mask] = 0
 
-    return standardized_ratings, means, stds
+    return z_score_ratings
 
-def create_bipartite_graph(users: torch.Tensor, items: torch.Tensor, ratings: torch.Tensor) -> torch.Tensor:
+def create_bipartite_graph(users: torch.Tensor, items: torch.Tensor, col_z_score_ratings: torch.Tensor, row_z_score_ratings) -> torch.Tensor:
     """
     Create a bipartite graph from the users, items and ratings.
         graph: [ [0, R], 
@@ -61,10 +63,10 @@ def create_bipartite_graph(users: torch.Tensor, items: torch.Tensor, ratings: to
     upper_left = torch.zeros((N_u, N_u), device=DEVICE)
     
     upper_right = torch.zeros((N_u, N_v), device=DEVICE)
-    upper_right[users, items] = ratings
+    upper_right[users, items] = col_z_score_ratings
 
     lower_left = torch.zeros((N_v, N_u), device=DEVICE)
-    lower_left[items, users] = ratings
+    lower_left[items, users] = row_z_score_ratings
 
     lower_right = torch.zeros((N_v, N_v), device=DEVICE)
 
@@ -108,6 +110,10 @@ def preprocess(train_df: pd.DataFrame) -> tuple:
     # Extract adjacency lists: observed values edge index (src, tgt) and ratings (values)
     all_users, all_items, all_ratings = extract_users_items_ratings(train_df)
 
+    # Split the data into trai and val sets
+    train_users, val_users, train_items, val_items, train_ratings, val_ratings = \
+        train_test_split(all_users, all_items, all_ratings, test_size=VAL_SIZE)
+    
     # Create rating matrix from the triplets
     all_ratings_matrix = np.zeros((N_u, N_v))
     all_ratings_matrix[all_users, all_items] = all_ratings
@@ -116,34 +122,35 @@ def preprocess(train_df: pd.DataFrame) -> tuple:
     all_mask = all_ratings_matrix != 0
 
     # Standardize the ratings matrix across columns (items) and extract ratings list for observed values
-    standardized_rating_matrix, means, stds = standardize_excluding_zeros(all_ratings_matrix, all_mask)
-    standardized_ratings = standardized_rating_matrix[all_users, all_items]
+    col_z_score_rating_matrix = standardize(all_ratings_matrix, all_mask, axis=0)
+    col_z_score_ratings = col_z_score_rating_matrix[train_users, train_items]
 
-    # Split the data into trai and val sets
-    train_users, val_users, train_items, val_items, standardized_train_ratings, standardized_val_ratings = \
-        train_test_split(all_users, all_items, standardized_ratings, test_size=VAL_SIZE)
-    
-    # Get the original val ratings for evaluation
-    original_val_ratings = all_ratings_matrix[val_users, val_items]
-    
+    # Standardize the ratings matrix across rows (users) and extract ratings list for observed values
+    row_z_score_rating_matrix = standardize(all_ratings_matrix, all_mask, axis=1)
+    row_z_score_ratings = row_z_score_rating_matrix[train_users, train_items]
+
     # Convert to torch tensors for training and move to device
-
-    standardized_train_ratings = torch.tensor(standardized_train_ratings, dtype=torch.float).to(DEVICE)
+    col_z_score_ratings = torch.tensor(col_z_score_ratings, dtype=torch.float).to(DEVICE)
+    row_z_score_ratings = torch.tensor(row_z_score_ratings, dtype=torch.float).to(DEVICE)
+    
+    train_ratings = torch.tensor(train_ratings, dtype=torch.float).to(DEVICE)
     train_users = torch.tensor(train_users, dtype=torch.long).to(DEVICE)
     train_items = torch.tensor(train_items, dtype=torch.long).to(DEVICE)
 
-    standardized_val_ratings = torch.tensor(standardized_val_ratings, dtype=torch.float).to(DEVICE)
-    original_val_ratings = torch.tensor(original_val_ratings, dtype=torch.float).to(DEVICE)
+    val_ratings = torch.tensor(val_ratings, dtype=torch.float).to(DEVICE)
     val_users = torch.tensor(val_users, dtype=torch.long).to(DEVICE)
     val_items = torch.tensor(val_items, dtype=torch.long).to(DEVICE)
 
+
+    # TODO: try to put two times the col_z_score_ratings and get rid of the row_z_score_ratings
+
     # Create the bipartite graph adjacency matrix
-    bip_adj_matrix = create_bipartite_graph(train_users, train_items, standardized_train_ratings)
-    D = create_degree_matrix(bip_adj_matrix)
-    D_norm = create_inverse_sqrt_degree_matrix(D)
+    bip_adj_matrix = create_bipartite_graph(train_users, train_items, col_z_score_ratings, row_z_score_ratings)
+    D_raw = create_degree_matrix(bip_adj_matrix)
+    D_norm = create_inverse_sqrt_degree_matrix(D_raw)
 
     # Compute the normalized adjacency matrix and move to device
     A_tilde = D_norm @ bip_adj_matrix @ D_norm
     A_tilde = A_tilde.to(DEVICE)
 
-    return A_tilde, standardized_train_ratings, train_users, train_items, means, stds, val_users, val_items, original_val_ratings, standardized_val_ratings
+    return A_tilde, train_users, train_items, train_ratings, val_users, val_items, val_ratings

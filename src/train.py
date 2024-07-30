@@ -16,14 +16,6 @@ from config import N_u, N_v
 
 ########## Functions ##########
 
-def save_means_stds(ID, means: np.ndarray, stds: np.ndarray) -> None:
-    """
-    Save the means and stds to a file.
-    """
-    path = f"../data/model_state/means_stds_{ID}.npz"
-    with open(path, 'wb') as f:
-        np.savez(f, means=means, stds=stds)
-
 def train_one_epoch(model, optimizer, loss_fn, users, items, ratings) -> float:
     """
     Train the model for one epoch.
@@ -46,42 +38,22 @@ def evaluate_one_epoch(model, loss_fn, users, items, ratings) -> float:
         J = loss_fn(preds, ratings)
     return torch.sqrt(J).item()
 
-def evaluate_one_epoch_original(model, loss_fn, users, items, ratings, means, stds) -> float:
-    """
-    Evaluate the model for one epoch.
-    """
-    model.eval()
-    with torch.no_grad():
-        preds = model.forward(users, items)
-        reversed_preds = reverse_standardization(preds, means, stds, users, items)
-        J = loss_fn(reversed_preds, ratings)
-    return torch.sqrt(J).item()
-
-def reverse_standardization(preds, means, stds, users, items) -> torch.Tensor:
-    pred_rating_matrix = np.zeros((N_u, N_v))
-    pred_rating_matrix[users.cpu().numpy(), items.cpu().numpy()] = preds.cpu().numpy()
-    reversed_ratings = pred_rating_matrix * stds + means
-    reversed_ratings = reversed_ratings[users.cpu().numpy(), items.cpu().numpy()]
-    reversed_ratings = torch.tensor(reversed_ratings, dtype=torch.float32, device=DEVICE)
-    return reversed_ratings
-
-def save_model_on_val_improvement(model, best_loss, last_loss):
+def save_model_on_val_improvement(model, best_loss, current_loss):
     """
     Save the model if the validation loss has improved.
     """
-    if last_loss < best_loss:
-        best_loss = last_loss
+    if current_loss < best_loss:
+        best_loss = current_loss
         torch.save(model.state_dict(), f"../data/model_state/best_val_model_{model.ID}.pth")
 
-def report_losses(epoch, train_losses, val_losses_std, val_losses_orig, verbosity):
+def report_losses(epoch, train_losses, val_losses, best_loss, verbosity):
     """
     Print the training and validation losses.
     """
     if epoch % verbosity == 0 and epoch > 0:
         moving_avg_train = np.mean(train_losses[-verbosity:])
-        moving_avg_val_orig = np.mean(val_losses_std[-verbosity:])
-        moving_avg_val_std = np.mean(val_losses_orig[-verbosity:])
-        print(f"Epoch {epoch} - Avg loss in last {verbosity} epochs: - Train: {moving_avg_train:.4f} - Val std: {moving_avg_val_orig:.4f} - Val orig: {moving_avg_val_std:.4f}")
+        moving_avg_val = np.mean(val_losses[-verbosity:])
+        print(f"Epoch {epoch} - Best Val: {best_loss:.4f} at {val_losses.index(best_loss) + 1} - mv-avg: - Train: {moving_avg_train:.4f} - Val: {moving_avg_val:.4f}")
 
 def early_stopping(epoch, train_losses, stop_threshold) -> bool:
     """
@@ -103,29 +75,27 @@ def report_best_val_loss(val_losses) -> None:
 
 ########## Main ##########
 
-def train_model(model, optimizer, loss_fn, train_users, train_items, standardized_train_ratings, val_users, val_items, orig_val_ratings, standardized_val_ratings, means, stds, n_epochs, stop_threshold, save_best_model, verbosity=1) -> tuple[list, list]:
+def train_model(model, optimizer, loss_fn, train_users, train_items, train_ratings, val_users, val_items, val_ratings, n_epochs, stop_threshold, save_best_model=False, verbosity=1) -> tuple[list, list]:
     """
     Train the model.
+    Note: trains on MSE, evaluates on RMSE.
     """
     if save_best_model:
-        save_means_stds(model.ID, means, stds)
         model.save_model_inputs()
     best_loss = float('inf')
     train_losses = []
-    val_losses_std = []
-    val_losses_orig = []
+    val_losses = []
     for epoch in range(n_epochs):
-        train_loss = train_one_epoch(model, optimizer, loss_fn, train_users, train_items, standardized_train_ratings)
-        val_loss_standardized = evaluate_one_epoch(model, loss_fn, val_users, val_items, standardized_val_ratings)
-        val_loss_original = evaluate_one_epoch_original(model, loss_fn, val_users, val_items, orig_val_ratings, means, stds)
+        train_loss = train_one_epoch(model, optimizer, loss_fn, train_users, train_items, train_ratings)
+        val_loss = evaluate_one_epoch(model, loss_fn, val_users, val_items, val_ratings)
+        best_loss = min(val_loss, best_loss)
         if save_best_model:
-            save_model_on_val_improvement(model, best_loss, val_loss_standardized)
+            save_model_on_val_improvement(model, best_loss, val_loss)
         train_losses.append(train_loss)
-        val_losses_std.append(val_loss_standardized)
-        val_losses_orig.append(val_loss_original)
-        report_losses(epoch, train_losses, val_losses_std, val_losses_orig, verbosity)
+        val_losses.append(val_loss)
+        report_losses(epoch, train_losses, val_losses, best_loss,  verbosity)
         if early_stopping(epoch, train_losses, stop_threshold):
             break
-    report_best_val_loss(val_losses_orig)
+    report_best_val_loss(val_losses)
 
-    return train_losses, val_losses_std, val_losses_orig
+    return train_losses, val_losses
