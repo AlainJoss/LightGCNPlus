@@ -38,13 +38,14 @@ def evaluate_one_epoch(model, loss_fn, users, items, ratings) -> float:
         J = loss_fn(preds, ratings)
     return torch.sqrt(J).item()
 
-def save_model_on_val_improvement(model, best_loss, current_loss):
+def save_model_on_val_improvement(model, best_loss: float, current_loss: float) -> float:
     """
     Save the model if the validation loss has improved.
     """
     if current_loss < best_loss:
-        best_loss = current_loss
         torch.save(model.state_dict(), f"../data/model_state/best_val_model_{model.ID}.pth")
+        return current_loss
+    return best_loss  
 
 def report_losses(epoch, train_losses, val_losses, best_loss, verbosity):
     """
@@ -88,9 +89,8 @@ def train_model(model, optimizer, loss_fn, train_users, train_items, train_ratin
     for epoch in range(n_epochs):
         train_loss = train_one_epoch(model, optimizer, loss_fn, train_users, train_items, train_ratings)
         val_loss = evaluate_one_epoch(model, loss_fn, val_users, val_items, val_ratings)
-        best_loss = min(val_loss, best_loss)
         if save_best_model:
-            save_model_on_val_improvement(model, best_loss, val_loss)
+            best_loss = save_model_on_val_improvement(model, best_loss, val_loss)
         train_losses.append(train_loss)
         val_losses.append(val_loss)
         report_losses(epoch, train_losses, val_losses, best_loss,  verbosity)

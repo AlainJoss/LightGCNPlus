@@ -4,140 +4,131 @@
 %\usepackage{balance}
 \usepackage{url}
 \usepackage{graphicx}	% For figure environment
+\usepackage{amssymb}   % For blackboard bold symbols
+\usepackage{amsmath}   % For mathematical environments like bmatrix
 
 
 \begin{document}
-\title{Writing Scientific Papers and Software}
+\title{LightGCNPlus \\ A Graph Convolutional Network for Matrix Completion}
 
 \author{
-  Cheng Soon Ong\\
+  Alain Joss \\
+  Solomon Thiessen \\
+  Antoine Suter \\
   Department of Computer Science, ETH Zurich, Switzerland
 }
 
 \maketitle
 
 \begin{abstract}
-  A critical part of scientific discovery is the
-  communication of research findings to peers or the general public.
-  Mastery of the process of scientific communication improves the
-  visibility and impact of research. While this guide is a necessary
-  tool for learning how to write in a manner suitable for publication
-  at a scientific venue, it is by no means sufficient, on its own, to
-  make its reader an accomplished writer. We also describe the rules
-  for submission in the computational intelligence laboratory.
-  This guide should be a
-  starting point for further development of writing skills.
+  Personalized recommendation has become essential for businesses to enhance user experience and satisfaction. 
+  In this context, we explore the task of collaborative filtering within the framework of matrix completion. 
+  While the primary goal of collaborative filtering is to rank preferences for unobserved user-item interactions, 
+  predicting ratings can provide deeper insights into user preferences, 
+  thus improving decision-making across various use cases.
+  
+  In this work, we propose LightGCNPlus, a graph convolutional encoder-decoder network designed to predict ratings for unobserved user-item interactions, 
+  extending the original LightGCN model. 
+  LightGCNPlus incorporates the message passing logic of LightGCN in its hidden layer, adapting it to handle a set of real valued user-item ratings, rather than binary user-item interactions.
+  The decoder then concatenates these representations and passes them through a multi-layer perceptron (MLP) to predict ratings, rather than just ranking items. 
+  This approach enhances the model's ability to deliver accurate and personalized recommendations.
 \end{abstract}
 
 \section{Introduction}
 
-The aim of writing a paper is to infect the mind of your reader with
-the brilliance of your idea~\cite{jones08}. 
-The hope is that after reading your
-paper, the audience will be convinced to try out your idea. In other
-words, it is the medium to transport the idea from your head to your
-reader's head. 
-In the following
-section, we show a common structure of scientific papers and briefly
-outline some tips for writing good papers in
-Section~\ref{sec:tips-writing}.
+\section{Model and Methods}
+\subsection{Problem Formulation}
+Given a partially observed (sparse) user-item rating matrix $R \in \mathbb{R}^{m \times n}$, the task of matrix completion consists of predicting the missing ratings in $R$.
+where $m$ is the number of users and $n$ is the number of items, we construct a bipartite graph $G = (U, I, E)$, where $U$ and $I$ are the sets of users and items, respectively, and $E$ is the set of edges connecting users to items.
+The adjacency matrix $A \in \mathbb{R}^{(m+n) \times (m+n)}$ of the graph $G$ is defined as:
+\begin{equation}
+    A = \begin{bmatrix}
+    0 & R \\
+    R^T & 0
+    \end{bmatrix}
+\end{equation}
+\subsection{Preprocessing}
+As a preprocessing step, we standardize the rating matrix $R$ using $z$-scores, applied separately over columns and rows to obtain $Z_{\text{col}}$ and $Z_{\text{row}}$, 
+having zero mean and unit variance along their respective dimensions.
+This ensures that ratings are comparable across items in $Z_{\text{col}}$ and users in $Z_{\text{row}}$.
+Subsequently, we define the standardized adjacency matrix $\hat{A}$ as:
+\[
+\hat{A} = \begin{bmatrix}
+0 & Z_{\text{col}} \\
+Z_{\text{row}}^T & 0
+\end{bmatrix}
+\]
+(To write in results the interpretations and that it radically improves the performance, also that it is different to traditional standardization over just $R_u$).
 
-At that
-point, it is important that the reader is able to reproduce your
-work~\cite{schwab00,wavelab,gentleman05}. This is why it is also
-important that if the work has a computational component, the software
-associated with producing the results are also made available in a
-useful form. Several guidelines for making your user's experience with
-your software as painless as possible is given in
-Section~\ref{sec:tips-software}.
+\subsection{Encoder}
+\subsubsection{Graph Convolution}
+The encoder of LightGCNPlus inherits the graph convolution (message passing logic) from the LightGCN model.
+The graph convolution operation propagates information across the graph, updating the hidden representation of each node based on its neighbors.
+Using multiple layers of graph convolution allows the model to capture higher-order relationships between users and items.
+We adapt the graph convolution operation to handle real valued user-item ratings, such that
+for a given node $v$, the hidden representation $h_v^{(l+1)}$ at layer $l+1$ is computed as:
+\begin{align}
+    h_u^{(l+1)} &= \sum_{i \in N(u)} \frac{z_{\text{col}_{u,i}}}{\sqrt{|N(u)||N(i)|}} h_i^{(l)} \quad \forall u \in U \\
+    h_i^{(l+1)} &= \sum_{u \in N(i)} \frac{z_{\text{row}_{u,i}}}{\sqrt{|N(u)||N(i)|}} h_u^{(l)}  \quad \forall i \in I
+\end{align}
+where $N(v)$ is the set of neighbors of node $v$, $z_{u,i}$ is the edge weight (standardized rating) between user $u$ and item $i$, and $h_v^{(l)}$ is the hidden representation of node $v$ at layer $l$.
+The hidden representations $h_v^{(0)}$ at the input layer represent the learnable embeddings of node $v$. Finally, the symmetrical normalization term $\sqrt{|N(u)||N(i)|}$ ensures that the hidden representations are scaled appropriately. Other choices of normalization are possible.
 
-Finally, we describe the rules for submission in the computational
-intelligence laboratory in Section~\ref{sec:cil}. 
-This brief guide is by no means sufficient, on its own, to
-make its reader an accomplished writer. The reader is urged to use the
-references to further improve his or her writing skills.
+The $L$-layer graph convolution operation can be expressed more compactly in terms of matrix operations as:
+\begin{equation}
+    H^{(l+1)} = \tilde{A} H^{(l)}
+\end{equation}
+where $\tilde{A} = D^{-\frac{1}{2}} \hat{A} D^{-\frac{1}{2}}$ is the normalized standardized-adjacency matrix, $D$ is the diagonal degree matrix of $\hat{A}$, and $H^{(l)}$ is the matrix of hidden representations at layer $l$.
+\subsubsection{Aggregator}
+After $L$ layers of graph convolution, the hidden representations $h_v^{(l)}$ of node $v$ are aggregagated to obtain the final representations.
+To maximize the expressiveness of the model, we aggregate the hidden representations by concatenating them along the feature dimension, 
+resulting in the final representation $h_v$:
+\begin{equation}
+    h_v = \text{concat}(h_v^{(0)}, h^{(1)}, \ldots, h_v^{(L)})
+\end{equation}
+This choice is justified by the use of a multi-layer perceptron (MLP) in the decoder, which can take advantage of the concatenation aggregation, in contrast to other aggregation methods such as summation or averaging.
 
-\section{The Structure of a Paper}
-\label{sec:structure-paper}
+\subsection{Decoder}
+The decoder of LightGCNPlus is a multi-layer perceptron (MLP) that takes the concatenated hidden representations $h_u$ and $h_i$ of user $u$ and item $i$ couples as input, and outputs the predicted rating $\hat{r}_{u,i}$:
+\begin{equation}
+    \hat{r}_{u,i} = \text{MLP}(\text{concat}(h_u, h_i))
+\end{equation}
+The specific choice of the MLP's architecture is a hyperparameter of the overall model.
 
-Scientific papers usually begin with the description of the problem,
-justifying why the problem is interesting. Most importantly, it argues
-that the problem is still unsolved, or that the current solutions are
-unsatisfactory. This leads to the main gist of the paper, which is
-``the idea''. The authors then show evidence, using derivations or
-experiments, that the idea works. Since science does not occur in a
-vacuum, a proper comparison to the current state of the art is often
-part of the results. Following these ideas, papers usually have the
-following structure:
-\begin{description}
-\item[Abstract] \ \\
-  Short description of the whole paper, to help the
-  reader decide whether to read it.
-\item[Introduction] \ \\
-  Describe your problem and state your
-  contributions.
-\item[Models and Methods] \ \\
-  Describe your idea and how it was implemented to solve
-  the problem. Survey the related work, giving credit where credit is
-  due.
-\item[Results] \ \\
-  Show evidence to support your claims made in the
-  introduction.
-\item[Discussion] \ \\
-  Discuss the strengths and weaknesses of your
-  approach, based on the results. Point out the implications of your
-  novel idea on the application concerned.
-\item[Summary] \ \\
-  Summarize your contributions in light of the new
-  results.
-\end{description}
+\subsection{Training}
+The training objective of LightGCNPlus is to predict the ratings of the observed user-item interactions in the training set $\Omega$.
+The learnable parameters of the model $W$ comprise the embeddings of users and items and the weights of the MLP, and are trained end-to-end using the Adam optimizer.
+We initialize the embeddings using a normal distribution, with tunable standard deviation $\sigma_{\text{init}}$, and the weights of the MLP using the Xavier initialization.
+As loss function we use the mean squared error (MSE) between the predicted ratings $\hat{R}$ and the true ratings $R$:
+\begin{equation}
+    \mathcal{L} = \frac{1}{|\Omega|} \sum_{(u,i) \in \Omega} (\hat{r}_{u,i} - r_{u,i})^2 + \lambda ||W||_2^2
+\end{equation}
+where $\lambda$ is the weight decay regularization strength.
+In addition to weight decay, to regularize the model we apply dropout to the MLP.
+Finally, we avoid mini-batching to ensure that the model can learn the global structure of the graph, concurrently speeding up convergence.
 
+\subsection{Tuning}
+The hyperparameters of LightGCNPlus include the number of layers $L$, the dimensionality of the hidden representations $K$, the learning rate $\eta$, the weight decay regularization strength $\lambda$, the dropout rate $p$, and the hyperparameters of the MLP.
+The MLP's hyperparameters consists of $\sigma_{\text{init}}$, the number of hidden layers, the number of units per hidden layer, and the activation function $f$.
 
-\section{Tips for Good Writing}
-\label{sec:tips-writing}
+After performing an initial grid search, we narrow the search-space by fixing following hyperparameters: $K=28$, $\eta=0.01$, $p=0.5$, and $\lambda=0.00005$, $\sigma_{\text{init}}=0.075$, and $f=\text{GELU}$.
 
-The ideas for good writing have come
-from~\cite{editor10,jones08,anderson04}.
+We tune the remaining hyperparameters, the number of layers in the graph convolution $L$, the dimension of the hidden representations $K$ and the MLP's architecture, by performing a simple grid search.
 
-\subsection{Getting Help}
-One should try to get a draft read by as many friendly people as
-possible. And remember to treat your test readers with respect. If
-they are unable to understand something in your paper, then it is
-highly likely that your reviewers will not understand it
-either. Therefore, do not be defensive about the criticisms you get,
-but use it as an opportunity to improve the paper. Before your submit
-your friends to the pain of reading your draft, please \emph{use a
-  spell checker}.
+\subsection{Inference}
+\subsubsection{Ensembling}
+In the tuning phase, we find that multiple models with different hyperparameters can achieve similar performance.
+We take advantage of this insight by ensembling the top $M$ models, decreasing the variance of the predictions.
+We find that this additional step makes predictions more robust and improves the overall performance of the model.
 
-\subsection{Abstract}
-The abstract should really be written last, along with the title of
-the paper. The four points that should be covered~\cite{jones08}:
-\begin{enumerate}
-\item State the problem.
-\item Say why it is an interesting problem.
-\item Say what your solution achieves.
-\item Say what follows from your solution.
-\end{enumerate}
+The ensembled prediction matrix is obtained by computing a weighted average of the predictions of the individual models.
+The weights are determined by splitting the validation set into a set for fitting the ensemble weights and a set for evaluating the ensemble's performance.
+We cap the number of models in the ensemble at $M=10$ to prevent overfitting.
+\subsubsection{Postprocessing}
+To ensure that the predictions are within the valid rating range, we clip the predictions to the interval $[1, 5]$.
 
-\subsection{Figures and Tables}
+\section{Experiments}
 
-\begin{figure}[tbp]
-  \centering
-  \includegraphics[width=\columnwidth]{denoised_signal_1d}
-  \caption{Signal compression and denoising using the Fourier basis.}
-  \label{fig:denoise-fourier}
-\end{figure}
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\columnwidth]{local_wdenoised_1d}
-  \caption{Signal compression and denoising using the Daubechies wavelet basis.}
-  \label{fig:denoise-wavelet}
-\end{figure}
-
-Use examples and illustrations to clarify ideas and results. For
-example, by comparing Figure~\ref{fig:denoise-fourier} and
-Figure~\ref{fig:denoise-wavelet}, we can see the two different
-situations where Fourier and wavelet basis perform well. 
 
 \subsection{Models and Methods}
 The models and methods
