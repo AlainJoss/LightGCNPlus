@@ -39,4 +39,4 @@ Before you begin, ensure you have met the following requirements:
 To use the `LightGCN+` model and other experimental models in this project, refer to the Jupyter notebooks provided in the `experiments` folder. These notebooks include detailed examples and step-by-step instructions on data preprocessing, model training, hyperparameter tuning, and evaluation.
 
 ## Results
-The performance of the models is evaluated using the root-mean-squared error (RMSE). The best model achieves an RMSE of X.XXX on the validation set. Detailed results and visualizations are provided in the experiment notebooks.
+The performance of the models is evaluated using the root-mean-squared error (RMSE). Detailed results and visualizations are provided in the experiment notebooks.
