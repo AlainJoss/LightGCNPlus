@@ -26,12 +26,17 @@ Before you begin, ensure you have met the following requirements:
     source env/bin/activate
     ```
 3. Install the required packages:
-    ```
+    ```sh
     pip install -r requirements.txt
     ```
 
+## Folder Structure
+- `experiments`: Contains scripts for experimenting with different models and configurations.
+- `src`: Contains source code for model training and evaluation.
+- `data`: Stores data used in preprocessing, training, and post-processing phases.
+
 ## Usage
-To use the LightGCNPlus model and other experimental models of this project, refer to the Jupyter notebooks provided in the experiments folder. These notebooks include detailed examples and step-by-step instructions on data preprocessing, model training, hyperparameter tuning, and evaluation.
+To use the `LightGCN+` model and other experimental models in this project, refer to the Jupyter notebooks provided in the `experiments` folder. These notebooks include detailed examples and step-by-step instructions on data preprocessing, model training, hyperparameter tuning, and evaluation.
 
 ## Results
 The performance of the models is evaluated using the root-mean-squared error (RMSE). The best model achieves an RMSE of X.XXX on the validation set. Detailed results and visualizations are provided in the experiment notebooks.
