@@ -4,6 +4,8 @@ This folder contains all scripts used for experimenting with different models an
 
 - In the EDA notebook we perform an exploratory data analysis on the provided dataset for the competition.
 
+- In the baselines notebook we train baseline models (ALS and NCF) and evaluate their performance for comparison with our models.
+
 - In the GCMCPlus and LightGCNPlus notebooks we introduce the corresponding models, we train them on different configurations (variations of architectures and hyperparameters), and re-train them on the configuration that achieves the best validation score. We then post-process the predictions and test them against the Kaggle leaderboard.
 
 - In the general_experiments notebook we test different hyperparameters in isolation on LightGCNPlus, to understand their impact on performance and to reduce the search space for the hyperparameter optimization.
