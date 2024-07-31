@@ -32,7 +32,8 @@ Before you begin, ensure you have met the following requirements:
 
     ```sh
     python -m venv env
-    source env/bin/activate
+    source env/Scripts/activate
+    python -m ipykernel install --user
     ```
 
 3. Install the required packages:
