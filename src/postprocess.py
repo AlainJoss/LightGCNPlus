@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
+import seaborn as sns
 
 from config import N_u, N_v
 from load import load_submission_users_items
@@ -61,23 +62,37 @@ def to_submission_format(users, movies, predictions):
 
 ########## Main ##########
 
+
 def report_training_results(train_rmse, val_rmse):
     # Replace values above 1 with 1 in the rmse lists
     train_rmse_plot = [min(1, x) for x in train_rmse]
     val_rmse_plot = [min(1, x) for x in val_rmse]
 
-    # Plot train and val rmse
+    # Set style
+    sns.set(style="whitegrid")
+    
+    # Create plot
+    plt.figure(dpi=300)  # Set maximum resolution
     plt.title("Training Results")
-    plt.plot(train_rmse_plot, label='train')
-    plt.plot(val_rmse_plot, label='val')
-    plt.plot()
+    plt.plot(train_rmse_plot, label='Training RMSE', color='darkred')
+    plt.plot(val_rmse_plot, label='Validation RMSE', color='midnightblue')
+
     # Annotate min val loss
-    plt.annotate(round(min(val_rmse_plot), 4), (val_rmse_plot.index(min(val_rmse_plot)), min(val_rmse_plot)), textcoords="offset points", xytext=(0,-10), ha='center')
-    plt.axhline(y=min(val_rmse_plot), color='r', linestyle='--')
+    min_val_rmse = min(val_rmse_plot)
+    min_val_index = val_rmse_plot.index(min_val_rmse)
+    plt.annotate(f"{round(min_val_rmse, 4)}", 
+                 (min_val_index, min_val_rmse), 
+                 textcoords="offset points", 
+                 xytext=(0,-10), 
+                 ha='center',
+                 color='midnightblue')
+    plt.axhline(y=min_val_rmse, color='midnightblue', linestyle='--', alpha=0.7)
+
     plt.xlabel("Epoch")
     plt.ylabel("RMSE")
     plt.legend()
     plt.show()
+
 
 def postprocess_report_submit(model_class, ID):
     """

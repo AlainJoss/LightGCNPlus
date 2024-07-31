@@ -4,9 +4,11 @@ data/model_state/means_stds_*
 data/model_state/model_inputs_*
 data/model_state/best_val_model_*
 papers
+paper
 resources
 data/submission_data/submission.csv
 data/model_state/val_df.csv
 data/model_state/train_df.csv
 data/model_state/A_tilde.npy
 src/__pycache__
+data/model_state/results.csv
