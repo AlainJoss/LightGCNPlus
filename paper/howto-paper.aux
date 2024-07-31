@@ -19,28 +19,30 @@
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{section.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {II}Model and Methods}{1}{section.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Problem Formulation}{1}{subsection.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Preprocessing}{1}{subsection.2.2}\protected@file@percent }
+\newlabel{eq:A_hat}{{2}{1}{Problem Formulation}{equation.2.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Model Architecture}{2}{subsection.2.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Encoder}{2}{subsection.2.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {II-C}1}Graph Convolution}{2}{subsubsection.2.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {II-C}2}Aggregator}{2}{subsubsection.2.3.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Decoder}{2}{subsection.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Training}{2}{subsection.2.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-F}}Tuning}{2}{subsection.2.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Objective Function}{2}{subsection.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}Experiments}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Dataset}{2}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Preprocessing}{2}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Training}{2}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Inference}{2}{subsection.3.4}\protected@file@percent }
 \citation{velivckovic2018graph}
 \bibstyle{IEEEtran}
 \bibdata{howto-paper}
 \bibcite{van2017graph}{1}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-G}}Inference}{3}{subsection.2.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {II-G}1}Ensembling}{3}{subsubsection.2.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {II-G}2}Postprocessing}{3}{subsubsection.2.7.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {III}Experiments}{3}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Dataset}{3}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Design Choices}{3}{subsection.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}1}Matrix Standardization}{3}{subsubsection.3.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}2}Graph Convolution}{3}{subsubsection.3.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}3}Layer Aggregation}{3}{subsubsection.3.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}4}MLP Architecture}{3}{subsubsection.3.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Model Discovery Process}{3}{subsection.3.3}\protected@file@percent }
+\bibcite{he2020lightgcn}{2}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Model Design Choices}{3}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}1}Matrix Standardization}{3}{subsubsection.3.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}2}Graph Convolution}{3}{subsubsection.3.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}3}Layer Aggregation}{3}{subsubsection.3.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-E}4}MLP Architecture}{3}{subsubsection.3.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-F}}Hyperparameter Tuning}{3}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-G}}Ensembling}{3}{subsection.3.7}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Results}{3}{section.4}\protected@file@percent }
 \newlabel{sec:tips-writing}{{IV}{3}{Results}{section.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Baselines}{3}{subsection.4.1}\protected@file@percent }
@@ -49,7 +51,6 @@
 \@writefile{toc}{\contentsline {section}{\numberline {V}Discussion}{3}{section.5}\protected@file@percent }
 \newlabel{sec:tips-software}{{V}{3}{Discussion}{section.5}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VI}Summary}{3}{section.6}\protected@file@percent }
-\bibcite{he2020lightgcn}{2}
+\@writefile{toc}{\contentsline {section}{References}{3}{section*.1}\protected@file@percent }
 \bibcite{velivckovic2018graph}{3}
-\@writefile{toc}{\contentsline {section}{References}{4}{section*.1}\protected@file@percent }
 \gdef \@abspage@last{4}

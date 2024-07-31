@@ -51,51 +51,49 @@ In short: we represent user-item interactions in a bipartite graph and introduce
 
 \section{Model and Methods}
 \subsection{Problem Formulation}
-Given a partially observed (sparse) user-item rating matrix $R \in \mathbb{R}^{m \times n}$, where $m$ is the number of users and $n$ is the number of items, the task of matrix completion consists of predicting the missing ratings in $R$.
-To tackle the problem using graph-based methods, the first step is to represent the user-item interactions as a bipartite graph.
- we construct a bipartite graph $G = (U, I, E)$, where $U$ and $I$ are the sets of users and items, respectively, and $E$ is the set of edges connecting users to items.
-The adjacency matrix $A \in \mathbb{R}^{(m+n) \times (m+n)}$ of the graph $G$ is defined as:
+Given a sparse user-item rating matrix $R \in \mathcal{R}^{m \times n}$, with observed ratings $r_{u,i}$ for observed interaction pairs $(u,i) \in \Omega$, the task of matrix completion consists of predicting the missing ratings in $R$.
+
+Graph based methods approach matrix completion by representing the user-item interactions as a bipartite graph $G = (U, I, E)$, where $U$ and $I$ are the sets of users and items (nodes), respectively, and $E$ is the set interactions (edges) with weights $r_{u,i}$.
+The adjacency matrix $A \in \mathcal{R}^{(m+n) \times (m+n)}$ of the bipartite graph $G$ is defined as:
 \begin{equation}
     A = \begin{bmatrix}
     0 & R \\
     R^T & 0
     \end{bmatrix}
 \end{equation}
-\subsection{Preprocessing}
-As a preprocessing step, we standardize the rating matrix $R$ using $z$-scores, applied separately over columns and rows to obtain $Z_{\text{col}}$ and $Z_{\text{row}}$, 
-having zero mean and unit variance along their respective dimensions.
-This ensures that ratings are comparable across items in $Z_{\text{col}}$ and users in $Z_{\text{row}}$.
-Subsequently, we define the standardized adjacency matrix $\hat{A}$ as:
-\[
-\hat{A} = \begin{bmatrix}
-0 & Z_{\text{col}} \\
-Z_{\text{row}}^T & 0
-\end{bmatrix}
-\]
-We find that standardizing ratings, specifically by computing $Z_{\text{col}}$ and $Z_{\text{row}}$, greatly enhances the model's generalization to unobserved user-item interactions.
+The adjacency matrix may be preprocessed using different normalization techniques.
+We define the standardized adjacency matrix \(\hat{A}\) as:
+\begin{equation}
+    \hat{A} = \begin{bmatrix}
+    0 & Z_{\text{col}} \\
+    Z_{\text{row}}^T & 0
+    \end{bmatrix}
+    \label{eq:A_hat}
+\end{equation}
+where \(Z_{\text{col}}\) and \(Z_{\text{row}}\) represent the standardized user-item ratings, derived using z-score normalization on the columns and rows of \(R\), respectively. 
 
-The rationale behind this preprocessing step, is that standardizing across columns makes items comparable, while standardization across rows makes users comparable. 
-For example, if an item is highly rated by all users, it indicates that the item is generally well-received, and this information is captured uniformly across the dataset through \( Z_{\text{col}} \). 
-Conversely, if a particular user consistently rates items highly, \( Z_{\text{row}} \) adjusts for this user's rating tendency, allowing the model to focus on the relative preferences of the user rather than their absolute rating scale. 
-This dual standardization process helps in mitigating biases and variances inherent in user and item ratings, leading to more robust and accurate predictions.
+\subsection{Model Architecture}
+The LightGCN+ model consists of an encoder-decoder architecture, with the encoder comprising a multi-layer graph convolutional network and an aggregator function, and the decoder consisting of a multi-layer perceptron (MLP).
 
-This insight is key for the effectiveness of the convolution operation defined in the next section, and more broadly to the overall model's performance.
+Nodes $v$ in the graph (users and items) are represented by embeddings $e_v \in \mathbb{R}^K$, for all $v \in U \cup I$, and are learned end-to-end during training.
 
 \subsection{Encoder}
+The encoder of LightGCN+ consists of a multi-layer graph convolutional network and an aggregator function.
+It takes the embedding matrix $E \in R^{(m+n)xK}$ and the standardized adjacency matrix \(\hat{A}\) as inputs, and generates hidden representations $H$, which are then passed to the decoder.
+
 \subsubsection{Graph Convolution}
-The encoder of LightGCN+ inherits the graph convolution (message passing logic) from the LightGCN model.
-The graph convolution operation propagates information across the graph, updating the hidden representation of each node based on its neighbors.
-Using multiple layers of graph convolution allows the model to capture higher-order relationships between users and items.
-We adapt the graph convolution operation to handle real valued user-item ratings, such that
-for a given node $v$, the hidden representation $h_v^{(l+1)}$ at layer $l+1$ is computed as:
+Graph convolution is a form of message passing over the graph, where each node updates its representation by aggregating information from its neighbors, reflecting the local graph structure. 
+Applying this operation multiple times, in a layered fashion, enables the model to capture higher-order relationships between nodes.
+For a given node $v$, the hidden representation $h_v^{(l+1)}$ at layer $l+1$ is computed as:
 \begin{align}
     h_u^{(l+1)} &= \sum_{i \in N(u)} \frac{z_{\text{col}_{u,i}}}{\sqrt{|N(u)||N(i)|}} h_i^{(l)} \quad \forall u \in U \\
     h_i^{(l+1)} &= \sum_{u \in N(i)} \frac{z_{\text{row}_{u,i}}}{\sqrt{|N(u)||N(i)|}} h_u^{(l)}  \quad \forall i \in I
 \end{align}
-where $N(v)$ is the set of neighbors of node $v$, $z_{u,i}$ is the edge weight (standardized rating) between user $u$ and item $i$, and $h_v^{(l)}$ is the hidden representation of node $v$ at layer $l$.
-The hidden representations $h_v^{(0)}$ at the input layer represent the learnable embeddings of node $v$. Finally, the symmetrical normalization term $\sqrt{|N(u)||N(i)|}$ ensures that the hidden representations are scaled appropriately. 
+where $N(v)$ is the set of neighbors of $v$.
+Finally, the symmetrical normalization term $\sqrt{|N(u)||N(i)|}$ ensures that the hidden representations are scaled appropriately.
+Note that the hidden representations $h_v^{(0)}$ at the input layer correspond to the learnable embeddings $e_v$.
 
-The $L$-layer graph convolution operation can be expressed more compactly in terms of matrix multiplications as:
+The $L$-layered convolution operation can be expressed more compactly as:
 \begin{equation}
     H^{(l+1)} = \tilde{A} H^{(l)}
 \end{equation}
@@ -103,74 +101,76 @@ where $\tilde{A} = D^{-\frac{1}{2}} \hat{A} D^{-\frac{1}{2}}$ is the normalized 
 
 \subsubsection{Aggregator}
 After $L$ layers of graph convolution, the hidden representations $h_v^{(l)}$ of node $v$ are aggregagated to obtain the final representations.
-To maximize the expressiveness of the model, we aggregate the hidden representations by concatenating them along the feature dimension, 
-resulting in the final representation $h_v$:
+In contrast to the original LightGCN model, instead of averaging we use concatentation as aggregation function:
 \begin{equation}
-    h_v = \text{concat}(h_v^{(0)}, h^{(1)}, \ldots, h_v^{(L)})
+    h_v = \oplus(h_v^{(0)}, h^{(1)}, \ldots, h_v^{(L)})
 \end{equation}
-This choice is justified by the use of a multi-layer perceptron (MLP) in the decoder, which can take advantage of the concatenation aggregation, in contrast to other aggregation methods such as summation or averaging.
+where $\oplus$ denotes concatenation operator.
+Concatentating layered representations is a natural choice of aggregation for LightGCN+, given the use of a multi-layer perceptron (MLP) as the decoder.
 
 \subsection{Decoder}
-The decoder of LightGCN+ is a multi-layer perceptron (MLP) that takes the concatenated hidden representations $h_u$ and $h_i$ of user $u$ and item $i$ couples as input, and outputs the predicted rating $\hat{r}_{u,i}$:
+The decoder of LightGCN+ is a multi-layer perceptron (MLP) that takes the concatenated hidden representations \( h_u \) and \( h_i \) for a user-item pair \((u, i)\) and outputs the predicted rating \(\hat{r}_{u,i}\):
 \begin{equation}
-    \hat{r}_{u,i} = \text{MLP}(\text{concat}(h_u, h_i))
+    \hat{r}_{u,i} = \text{MLP}(\oplus(h_u, h_i))
 \end{equation}
-The specific choice of the MLP's architecture is a hyperparameter of the overall model.
+During training, user-item pairs \((u, i) \in \Omega\) (the set of observed interactions), while during inference, \((u, i) \notin \Omega\).
+
+\subsection{Objective Function}
+A natural choice of loss function for rating prediction is the mean squared error (MSE) between the predicted ratings \(\hat{R}\) and the true ratings \(R\):
+\begin{equation}
+    \mathcal{L} = \frac{1}{|\Omega|} \sum_{(u,i) \in \Omega} (\hat{r}_{u,i} - r_{u,i})^2
+\end{equation}
+Other loss functions could be used, depending on the specific use case.
+Learnable parameters of the model include user and item embeddings and the parameters of the MLP.
+
+
+\section{Experiments}
+
+\subsection{Dataset}
+
+We evaluate the performance of LightGCN+ on the ETHZ-CIL-Collaborative-Filtering-2024 dataset.
+The dataset consists of $10,000$ users and $1,000$ items, with $1176952$ observed ratings, which corresponds to a sparsity of $88.23 \%$.
+The ratings are integers in the range $[1, 5]$, with a mean rating of $3.86$ and a standard deviation of $1.12$.
+
+\subsection{Preprocessing}
+We find that normalizing the $\hat{A}$ using $Z_{\text{col}}$ and $Z_{\text{row}}$, as shown in Equation \ref{eq:A_hat}, significantly enhances the model's generalization ability. 
+The rationale behind this dual standardization is that it reduces biases and variances from individual user or item rating patterns. This makes them comparable across the graph, which is crucial for the effectiveness of the convolution operation.
 
 \subsection{Training}
-The training objective of LightGCN+ is to predict the ratings of the observed user-item interactions in the training set $\Omega$.
-The learnable parameters of the model $W$ comprise the embeddings of users and items and the weights of the MLP, and are trained end-to-end using the Adam optimizer.
-We initialize the embeddings using a normal distribution, with tunable standard deviation $\sigma_{\text{init}}$, and the weights of the MLP using the Xavier initialization.
-As loss function we use the mean squared error (MSE) between the predicted ratings $\hat{R}$ and the true ratings $R$:
-\begin{equation}
-    \mathcal{L} = \frac{1}{|\Omega|} \sum_{(u,i) \in \Omega} (\hat{r}_{u,i} - r_{u,i})^2 + \lambda ||W||_2^2
-\end{equation}
-where $\lambda$ is the weight decay regularization strength.
-In addition to weight decay, to regularize the model we apply dropout to the MLP.
-Finally, we avoid mini-batching to ensure that the model can learn the global structure of the graph, concurrently speeding up convergence.
-
-\subsection{Tuning}
-The hyperparameters of LightGCN+ include the number of layers $L$, the dimensionality of the hidden representations $K$, the learning rate $\eta$, the weight decay regularization strength $\lambda$, the dropout rate $p$, and the hyperparameters of the MLP.
-The MLP's hyperparameters consists of $\sigma_{\text{init}}$, the number of hidden layers, the number of units per hidden layer, and the activation function $f$.
-
-\textcolor{red}{Here we start speaking about the specific experiments on the data}
-
-After performing an initial grid search, we narrow the search-space by fixing following hyperparameters: $K=28$, $\eta=0.01$, $p=0.5$, and $\lambda=0.00005$, $\sigma_{\text{init}}=0.075$, and $f=\text{GELU}$.
-
-We tune the remaining hyperparameters, the number of layers in the graph convolution $L$, the dimension of the hidden representations $K$ and the MLP's architecture, by performing a simple grid search.
+The model is trained end-to-end using the Adam optimizer, with learning rate \(\eta=0.1\), weight decay $\lambda=0.00005$, and dropout rate \(p=0.5\).
+We avoid mini-batching to ensure that the model can learn the global structure of the graph, while also speeding up convergence. 
+To prevent overfitting we tuned $\lambda$ and $p$ accordingly. 
 
 \subsection{Inference}
-\subsubsection{Ensembling}
-In the tuning phase, we find that multiple models with different hyperparameters can achieve similar performance.
-We take advantage of this insight by ensembling the top $M$ models, decreasing the variance of the predictions.
+To predict ratings of unobserved user-item interactions, a simple forward pass through the learned model is performed.
+To ensure that the predictions are within the valid rating range we clip them to the interval $[1, 5]$.
+
+\subsection{Model Design Choices}
+During the design phase of the model we conduct several experiments to determine the best architecture for LightGCN+.
+\subsubsection{Matrix Standardization} We train the model without standardizing the ratings, with only column standardization, with only row standardization, and with both column and row standardization, finding that the latter yields the best performance.
+\subsubsection{Graph Convolution}
+In the multi-layer graph convolution, different normalization techniques can be applied to the message passing operation.
+For example, it would be possible to normalize using the inverse degree matrix $D^{-1}$, or learn normalization parameters $\alpha_{u,i}$ and $\beta_{u,i}$ for each edge.
+To this end, the GAT \cite{velivckovic2018graph} attention mechanism could be used. 
+We find that attention performs best with a single layer, but that a simple symmetric normalization enables to perform message passing across multiple layers, which can be effectively leveraged by the MLP in the decoder.
+\subsubsection{Layer Aggregation}
+Because at tghe output layer we use a MLP, aggregating by concatenation is a natural choice.
+We verify our hypothesis, trying out even averaging and weighted averaging, with $L+1$ learnable weights, verifying the initial intuition.
+\subsubsection{MLP Architecture}
+We perform extensive hyperparameter tuning on the MLP architecture, finding that a simple two-layer MLP with 64 units per layer and GELU activation function performs best.
+
+\subsection{Hyperparameter Tuning}
+After performing an initial investigation of the hyperparameters on isolation, we decide narrow the search-space by fixing the following hyperparameters: $K=28$, $\eta=0.01$, $p=0.5$, and $\lambda=0.00005$, $\sigma_{\text{init}}=0.075$, and $f=\text{GELU}$.
+
+We tune the remaining hyperparameters (the number of layers in the graph convolution $L$, the dimension of the hidden representations $K$ and the MLP's architecture) by performing a simple grid search.
+We find that multiple models with different hyperparameters can achieve similar performance.
+\subsection{Ensembling}
+We take advantage of the insights gained in the tuning of the model by ensembling the top $M$ performing models, with the aim of decreasing the variance of the predictions.
 We find that this additional step makes predictions more robust and improves the overall performance of the model.
 
 The ensembled prediction matrix is obtained by computing a weighted average of the predictions of the individual models.
 The weights are determined by splitting the validation set into a set for fitting the ensemble weights and a set for evaluating the ensemble's performance.
-We cap the number of models in the ensemble at $M=10$ to prevent overfitting.
-\subsubsection{Postprocessing}
-To ensure that the predictions are within the valid rating range, we clip the predictions to the interval $[1, 5]$.
-
-
-\section{Experiments}
-\subsection{Dataset}
-We evaluate the performance of LightGCN+ on the MovieLens 100K dataset, a widely used benchmark dataset for collaborative filtering tasks.
-The dataset consists of 100,000 ratings from 943 users on 1682 movies, with ratings ranging from 1 to 5.
-We split the dataset into training, validation, and test sets, with $80$ perc of the ratings used for training, $10$ perc for validation, and $10$ perc for testing.
-
-\subsection{Design Choices}
-We experiment with different design choices to evaluate the impact of each on the model's performance.
-\subsubsection{Matrix Standardization}
-\subsubsection{Graph Convolution}
-In the multi-layer graph convolution, different normalization techniques can be applied to the standardized adjacency matrix $\hat{A}$.
-For example, it would be possible to normalize using the inverse degree matrix $D^{-1}$, or learn normalization parameters $\alpha_{u,i}$ and $\beta_{u,i}$ for each edge.
-To this end, the GAT \cite{velivckovic2018graph} attention mechanism could be used. 
-We decide to apply symmetric normalization, following the simplicity philosophy of the original LightGCN.
-\subsubsection{Layer Aggregation}
-\subsubsection{MLP Architecture}
-In the graph convolution we experiment with different normalization techniques, including symmetric normalization, row normalization, and column normalization.
-
-\subsection{Model Discovery Process}
+Following the oiginal simplicity principle of the model and to avoid overfitting, we cap the number of models in the ensemble at $M=10$.
 
 \section{Results}
 \label{sec:tips-writing}

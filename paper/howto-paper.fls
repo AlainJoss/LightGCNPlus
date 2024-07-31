@@ -599,6 +599,10 @@ INPUT ./howto-paper.bbl
 INPUT howto-paper.bbl
 INPUT ./howto-paper.bbl
 INPUT howto-paper.bbl
+INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/times/ptmr7t.vf
+INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/times/ptmr8r.tfm
+INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/times/ptmri7t.vf
+INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmr9.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmr6.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmmi9.tfm
@@ -611,10 +615,6 @@ INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam1
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam7.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm
-INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/times/ptmr7t.vf
-INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/times/ptmr8r.tfm
-INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/times/ptmri7t.vf
-INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
 INPUT howto-paper.aux
 INPUT ./howto-paper.out
 INPUT ./howto-paper.out

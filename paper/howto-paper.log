@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.23)  30 JUL 2024 16:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.23)  31 JUL 2024 12:15
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -365,7 +365,17 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) [1{/usr/local/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc}
 
 
-] [2] (./howto-paper.bbl [3])
+]
+Underfull \hbox (badness 7221) in paragraph at lines 131--134
+[]\OT1/ptm/m/n/10 We eval-u-ate the per-for-mance of Light-GCN+ on
+ []
+
+
+Underfull \hbox (badness 1845) in paragraph at lines 131--134
+\OT1/ptm/m/n/10 the ETHZ-CIL-Collaborative-Filtering-2024 dataset. The
+ []
+
+[2] (./howto-paper.bbl [3])
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -384,21 +394,21 @@ Before submitting the final camera ready copy, remember to:
 LaTeX Warning: There were undefined references.
 
 Package rerunfilecheck Info: File `howto-paper.out' has not changed.
-(rerunfilecheck)             Checksum: F9F01046B5A08D5E1FE4ABB5B8D43856;3533.
+(rerunfilecheck)             Checksum: 39EB8F0662256647CBA256C8D210D2AA;3619.
  ) 
 Here is how much of TeX's memory you used:
- 10166 strings out of 476025
- 161521 string characters out of 5790016
+ 10168 strings out of 476025
+ 161523 string characters out of 5790016
  1874388 words of memory out of 5000000
- 30446 multiletter control sequences out of 15000+600000
+ 30447 multiletter control sequences out of 15000+600000
  551402 words of font info for 105 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,12n,76p,732b,584s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,12n,76p,732b,582s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on howto-paper.pdf (4 pages, 169182 bytes).
+Output written on howto-paper.pdf (4 pages, 171747 bytes).
 PDF statistics:
- 234 PDF objects out of 1000 (max. 8388607)
- 198 compressed objects within 2 object streams
- 43 named destinations out of 1000 (max. 500000)
+ 236 PDF objects out of 1000 (max. 8388607)
+ 200 compressed objects within 2 object streams
+ 44 named destinations out of 1000 (max. 500000)
  225 words of extra memory for PDF output out of 10000 (max. 10000000)
 
