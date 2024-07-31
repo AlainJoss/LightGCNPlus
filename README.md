@@ -49,13 +49,14 @@ Before you begin, ensure you have met the following requirements:
 
 ## Usage
 
-Here we provide a brief description of important source files
+First we provide a brief description of important source files
 
-* load.py contains functions to gather the training and submission data according to paths laid out in config.py.
-* models.py defines the architectures used in the models experimented with in this repo.
-* train.py defines the entire training pipeline including training, evaluation, and reporting.
-* preprocess.py contains functions to transform the rating matrix data into an adjacency matrix where the ratings are standardized as Z-scores
-* postprocess.py includes functions to generate predictions and convert them to the format specified for submission to kaggle
+* `config.py` defines paths to data, configures the kernel to use the GPU if available, and defines the rating matrix dimensions
+* `load.py` contains functions to gather the training and submission data according to paths laid out in `config.py`.
+* `models.py` defines the architectures used in the models experimented with in this repo.
+* `train.py` defines the entire training pipeline including training, evaluation, and reporting.
+* `preprocess.py` contains functions to transform the rating matrix data into an adjacency matrix where the ratings are standardized as Z-scores
+* `postprocess.py` includes functions to generate predictions and convert them to the format specified for submission to kaggle
 
 To use the `LightGCN+` model and other experimental models in this project, refer to the Jupyter notebooks provided in the `experiments` folder. A further README can be found there, along with notebooks that include detailed examples and step-by-step instructions on data preprocessing, model training, hyperparameter tuning, and evaluation.
 
