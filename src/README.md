@@ -33,5 +33,3 @@ This folder contains the essential components required to preprocess data, defin
   - Handles the training loop for the models.
   - Includes functions for training the models, computing loss, and updating model parameters.
 
-## Usage
-All functions across these files are utilized to perform experiments, train models, and fine-tune them in the `experiments` folder. Each script plays a vital role in ensuring the smooth execution of the workflow, from data preprocessing to model training and evaluation.
