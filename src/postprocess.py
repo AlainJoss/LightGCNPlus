@@ -1,5 +1,20 @@
 """
-In this script, we define the postprocessing steps to get the final predictions.
+The purpose of this script is to postprocess the model predictions.
+
+This involves the following steps:
+    1. Load the means and stds used for standardization.
+    2. Load the best model from the training process.
+    3. Get the raw predictions from the model for the submission users and items.
+    4. Clip the predictions to the range [1, 5].
+    5. Generate the submission file.
+
+The following functions are defined:
+    - load_means_stds: Load the means and stds used for standardization.
+    - report_submission_results: Report the min, max, and mean of the final ratings.
+    - report_clip_data: Report the min, max, and mean of the final ratings rounded.
+    - create_submission_matrix: Create the submission matrix from the predicted ratings.
+    - to_submission_format: Convert the submission data to the required format.
+    - postprocess_report_submit: Postprocess the model predictions.
 """
 
 ########## Imports ##########

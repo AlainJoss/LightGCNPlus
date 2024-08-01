@@ -1,8 +1,14 @@
 """
-In this script, we will define the models that we will use to predict the movie ratings.
-We define the following models:
-    - ConcatNonLinear: a GCN that concatenates the embeddings after message passing and applies a non-linear transformation to predict the ratings.
-    - ...
+The purpose of this script is to define the models used in the project.
+
+The following classes are defined:
+    - Model: Base class for all models.
+    - BaseLightGCN: Base class for LightGCN models.
+    - LightGCNPlus: LightGCN model with additional projections.
+
+The following functions are defined:
+    - load_best_val_model: Load the best model from a file.
+    - load_model_inputs: Load the model inputs from a file using pickle and reconstruct them.
 """
 
 ########## Imports ##########

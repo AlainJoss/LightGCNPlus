@@ -1,6 +1,12 @@
 """
-This script ensures GPU usage, sets the dimension for the rating matrices on which we train and test,
-gives the path to save data, and determines the validation split
+The purpose of this script is to define the configuration variables used in the project.
+
+The following variables are defined:
+    - DEVICE: The device to use for training the model.
+    - N_u, N_v: The number of users and items in the dataset.
+    - TRAIN_PATH: The path to the training data file.
+    - SUBMISSION_PATH: The path to the submission data file.
+    - VAL_SIZE: The size of the validation set as a fraction of the training data.
 """
 
 import torch

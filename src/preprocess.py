@@ -1,16 +1,26 @@
 """
 The purpose of this script is to preprocess the data for training the model.
+
 This involves the following steps:
-    - Extracting the users, movies, and ratings from the dataframes.
-    - Standardizing the ratings matrix excluding unobserved values (zeros).
-    - Splitting the data into training and validation sets.
-    - Converting the data to torch tensors and moving them to the device.
-    - Creating the normalized bipartite graph adjacency matrix for message passing.
-    - Returning the normalized adjacency matrix and the train/val data for training.
+    1. Extract users, movies, and ratings from the dataframe.
+    2. Split the data into training and validation sets.
+    3. Create the rating matrix from the training triplets.
+    4. Define a mask for selecting observed values in the training set.
+    5. Standardize the training ratings matrix across columns (items).
+    6. Standardize the training ratings matrix across rows (users).
+    7. Convert the data to torch tensors for training and move to device.
+    8. Create the bipartite graph adjacency matrix from the training data.
+    9. Create the degree matrix of the bipartite graph.
+    10. Create the inverse square root degree matrix of the bipartite graph.
+    11. Compute the normalized adjacency matrix and move to device.
+    12. Return the normalized bipartite adjacency matrix,
+        together with the training and validation users, items, and ratings.
+
+The following functions are defined:
+    - extract_users_items_ratings: Extract users, movies, and predictions from the dataframe.
+    - standardize: Standardize ratings excluding unobserved values (zeros).
+    - create_bipartite_graph: Create a bipartite graph from the users, items and ratings.
 """
-
-
-# TODO: test create bipartite graph
 
 ########## Imports ##########
 import pandas as pd
@@ -28,7 +38,6 @@ def extract_users_items_ratings(df):
     users, movies = [np.squeeze(arr) for arr in np.split(df.Id.str.extract('r(\d+)_c(\d+)').values.astype(int) - 1, 2, axis=-1)]
     ratings = df.Prediction.values
     return users, movies, ratings
-
 
 def standardize(rating_matrix: np.ndarray, mask: np.ndarray, axis: int) -> np.ndarray:
     """
@@ -106,33 +115,32 @@ def preprocess(train_df: pd.DataFrame) -> tuple:
     """
     Get the normalized bipartite adjacency matrix for training.
     """
-
     # Extract adjacency lists: observed values edge index (src, tgt) and ratings (values)
     all_users, all_items, all_ratings = extract_users_items_ratings(train_df)
 
-    # Split the data into trai and val sets
+    # Split the data into training and validation sets
     train_users, val_users, train_items, val_items, train_ratings, val_ratings = \
         train_test_split(all_users, all_items, all_ratings, test_size=VAL_SIZE)
-    
-    # Create rating matrix from the triplets
-    all_ratings_matrix = np.zeros((N_u, N_v))
-    all_ratings_matrix[all_users, all_items] = all_ratings
 
-    # Define mask for selecting observed values
-    all_mask = all_ratings_matrix != 0
+    # Create rating matrix from the training triplets
+    train_ratings_matrix = np.zeros((N_u, N_v))
+    train_ratings_matrix[train_users, train_items] = train_ratings
 
-    # Standardize the ratings matrix across columns (items) and extract ratings list for observed values
-    col_z_score_rating_matrix = standardize(all_ratings_matrix, all_mask, axis=0)
+    # Define mask for selecting observed values in the training set
+    train_mask = train_ratings_matrix != 0
+
+    # Standardize the training ratings matrix across columns (items)
+    col_z_score_rating_matrix = standardize(train_ratings_matrix, train_mask, axis=0)
     col_z_score_ratings = col_z_score_rating_matrix[train_users, train_items]
 
-    # Standardize the ratings matrix across rows (users) and extract ratings list for observed values
-    row_z_score_rating_matrix = standardize(all_ratings_matrix, all_mask, axis=1)
+    # Standardize the training ratings matrix across rows (users)
+    row_z_score_rating_matrix = standardize(train_ratings_matrix, train_mask, axis=1)
     row_z_score_ratings = row_z_score_rating_matrix[train_users, train_items]
 
     # Convert to torch tensors for training and move to device
     col_z_score_ratings = torch.tensor(col_z_score_ratings, dtype=torch.float).to(DEVICE)
     row_z_score_ratings = torch.tensor(row_z_score_ratings, dtype=torch.float).to(DEVICE)
-    
+
     train_ratings = torch.tensor(train_ratings, dtype=torch.float).to(DEVICE)
     train_users = torch.tensor(train_users, dtype=torch.long).to(DEVICE)
     train_items = torch.tensor(train_items, dtype=torch.long).to(DEVICE)
@@ -141,10 +149,7 @@ def preprocess(train_df: pd.DataFrame) -> tuple:
     val_users = torch.tensor(val_users, dtype=torch.long).to(DEVICE)
     val_items = torch.tensor(val_items, dtype=torch.long).to(DEVICE)
 
-
-    # TODO: try to put two times the col_z_score_ratings and get rid of the row_z_score_ratings
-
-    # Create the bipartite graph adjacency matrix
+    # Create the bipartite graph adjacency matrix from the training data
     bip_adj_matrix = create_bipartite_graph(train_users, train_items, col_z_score_ratings, row_z_score_ratings)
     D_raw = create_degree_matrix(bip_adj_matrix)
     D_norm = create_inverse_sqrt_degree_matrix(D_raw)

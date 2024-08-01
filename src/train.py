@@ -1,11 +1,14 @@
 """
-In this script, we will define the training loop for the models that we defined in models.py.
-We will define the following functions:
-    - train: the training loop for the model.
-    - evaluate: the evaluation loop for the model.
-    - predict: the prediction loop for the model.
-    - save_model: save the model to a file.
-    - load_model: load the model from a file.
+The purpose of this script is to define the training functions.
+
+The following functions are defined:
+    - train_one_epoch: Train the model for one epoch.
+    - evaluate_one_epoch: Evaluate the model for one epoch.
+    - save_model_on_val_improvement: Save the model if the validation loss has improved.
+    - report_losses: Print the training and validation losses.
+    - early_stopping: Check if the model should stop training early.
+    - report_best_val_loss: Report the best validation loss and the epoch at which it was achieved.
+    - train_model: Train the model.
 """
 
 ########## Imports ##########

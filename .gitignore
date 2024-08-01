@@ -12,3 +12,4 @@ data/model_state/train_df.csv
 data/model_state/A_tilde.npy
 src/__pycache__
 data/model_state/results.csv
+experiments/GCMCPlus.ipynb

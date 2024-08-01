@@ -1,5 +1,9 @@
 """
-In this script we load the data.
+The purpose of this script is to load the training data and the submission data.
+
+The following functions are defined:
+    - load_train_data: Load the training data.
+    - load_submission_users_items: Load the submission users and items.
 """
 
 ########## Imports ##########
