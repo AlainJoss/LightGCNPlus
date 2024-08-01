@@ -1,4 +1,5 @@
-# LightGCN+: A Graph Convolutional Network for Matrix Completion
+<h1 align="center">LightGCN+</h1>
+<h3 align="center">A Graph Convolutional Network for Matrix Completion</h3>
 
 ## Introduction
 
